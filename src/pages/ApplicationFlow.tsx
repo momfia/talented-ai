@@ -23,11 +23,34 @@ export default function ApplicationFlow() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const conversation = useConversation();
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to ElevenLabs websocket');
+      toast({
+        title: "Connected to AI Interviewer",
+        description: "The interview will begin shortly",
+      });
+    },
+    onDisconnect: () => {
+      console.log('Disconnected from ElevenLabs websocket');
+      setIsInterviewActive(false);
+    },
+    onMessage: (message) => {
+      console.log('Received message:', message);
+    },
+    onError: (error) => {
+      console.error('ElevenLabs error:', error);
+      toast({
+        title: "Interview Error",
+        description: "There was an issue with the interview connection",
+        variant: "destructive",
+      });
+    },
+  });
+  const { isSpeaking, status } = conversation;
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
-  const { isSpeaking, status } = useConversation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -110,12 +133,15 @@ export default function ApplicationFlow() {
   }, [jobId, navigate, toast]);
 
   useEffect(() => {
+    console.log('Conversation status changed:', status);
+    console.log('Is speaking:', isSpeaking);
+    
     if (status === 'connected') {
       setIsInterviewActive(true);
     } else if (status === 'disconnected') {
       setIsInterviewActive(false);
     }
-  }, [status]);
+  }, [status, isSpeaking]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -352,7 +378,16 @@ export default function ApplicationFlow() {
       setIsProcessing(true);
 
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 24000,
+            channelCount: 1
+          }
+        });
+        stream.getTracks().forEach(track => track.enabled = true);
       } catch (error) {
         throw new Error('Microphone permission denied');
       }
@@ -409,7 +444,8 @@ export default function ApplicationFlow() {
         overrides: {
           agent: {
             language: "en",
-            context: JSON.stringify(interviewContext)
+            context: JSON.stringify(interviewContext),
+            debug: true
           },
           tts: {
             voiceId: "pNInz6obpgDQGcFmaJgB",
@@ -421,6 +457,10 @@ export default function ApplicationFlow() {
               use_speaker_boost: true
             }
           },
+          stt: {
+            sensitivity: 0.5,
+            noiseCancellation: true
+          }
         }
       });
 
@@ -604,6 +644,7 @@ export default function ApplicationFlow() {
                       <Button
                         onClick={startInterview}
                         disabled={isProcessing}
+                        className="bg-primary text-white px-6 py-2 rounded-full hover:bg-primary/90"
                       >
                         {isProcessing ? (
                           <>
@@ -620,14 +661,14 @@ export default function ApplicationFlow() {
                     ) : (
                       <div className="space-y-4 w-full">
                         <div className="flex items-center justify-center gap-4">
-                          <div className={`p-4 rounded-full ${isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
+                          <div className={`p-4 rounded-full transition-all duration-200 ${isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
                             {isSpeaking ? (
                               <Mic className="h-6 w-6 text-green-600" />
                             ) : (
                               <MicOff className="h-6 w-6 text-gray-600" />
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground font-medium">
                             {isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
                           </div>
                         </div>
@@ -635,7 +676,10 @@ export default function ApplicationFlow() {
                         <div className="text-center">
                           <Button
                             variant="outline"
-                            onClick={() => conversation.endSession()}
+                            onClick={() => {
+                              console.log('Ending interview session...');
+                              conversation.endSession();
+                            }}
                             className="mt-4"
                           >
                             End Interview
@@ -643,7 +687,7 @@ export default function ApplicationFlow() {
                         </div>
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground text-center">
                       You'll have a conversation with our AI interviewer
                     </p>
                   </div>

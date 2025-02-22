@@ -25,6 +25,7 @@ export default function ApplicationFlow() {
   const [showPreview, setShowPreview] = useState(false);
   const conversation = useConversation();
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -39,10 +40,60 @@ export default function ApplicationFlow() {
         return;
       }
       setUserId(session.user.id);
+      return session.user.id;
     };
 
-    checkAuth();
-  }, [navigate]);
+    const loadExistingApplication = async (candidateId: string) => {
+      if (!jobId) return;
+
+      try {
+        const { data: application, error } = await supabase
+          .from('applications')
+          .select('*')
+          .eq('job_id', jobId)
+          .eq('candidate_id', candidateId)
+          .single();
+
+        if (error) {
+          if (error.code !== 'PGRST116') { // Not found error
+            throw error;
+          }
+          // If no application found, stay at resume step
+          setIsLoading(false);
+          return;
+        }
+
+        if (application) {
+          setApplicationId(application.id);
+          
+          // Determine the current step based on application status
+          if (application.status === 'video_uploaded') {
+            setCurrentStep('interview');
+          } else if (application.status === 'resume_uploaded') {
+            setCurrentStep('video');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading application:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load application data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const init = async () => {
+      const userId = await checkAuth();
+      if (userId) {
+        await loadExistingApplication(userId);
+      }
+    };
+
+    init();
+  }, [jobId, navigate, toast]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -294,8 +345,12 @@ export default function ApplicationFlow() {
     }
   };
 
-  if (!userId) {
-    return null;
+  if (!userId || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (

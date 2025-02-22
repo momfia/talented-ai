@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +14,7 @@ type Profile = {
 export function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function getProfile() {
@@ -52,20 +54,20 @@ export function Dashboard() {
       
       {profile.role === 'recruiter' ? (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/jobs')}>
             <CardHeader>
-              <CardTitle>Post a Job</CardTitle>
+              <CardTitle>Job Descriptions</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Create a new job listing to find the perfect candidate.</p>
+              <p className="text-muted-foreground">Manage your job listings and review candidate requirements.</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/recruiter-dashboard')}>
             <CardHeader>
-              <CardTitle>View Applications</CardTitle>
+              <CardTitle>Applications Dashboard</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Review and manage candidate applications.</p>
+              <p className="text-muted-foreground">Review and manage candidate applications and assessments.</p>
             </CardContent>
           </Card>
         </div>

@@ -9,6 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      applications: {
+        Row: {
+          assessment_score: number | null
+          candidate_id: string
+          conversation_transcript: string | null
+          created_at: string
+          id: string
+          job_id: string
+          key_attributes: Json | null
+          reference_verified: boolean | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_score?: number | null
+          candidate_id: string
+          conversation_transcript?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          key_attributes?: Json | null
+          reference_verified?: boolean | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_score?: number | null
+          candidate_id?: string
+          conversation_transcript?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          key_attributes?: Json | null
+          reference_verified?: boolean | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          bad_candidate_attributes: string | null
+          created_at: string
+          description: string
+          essential_attributes: string[] | null
+          good_candidate_attributes: string | null
+          id: string
+          llm_suggested_attributes: string[] | null
+          recruiter_id: string
+          status: Database["public"]["Enums"]["job_status"] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          bad_candidate_attributes?: string | null
+          created_at?: string
+          description: string
+          essential_attributes?: string[] | null
+          good_candidate_attributes?: string | null
+          id?: string
+          llm_suggested_attributes?: string[] | null
+          recruiter_id: string
+          status?: Database["public"]["Enums"]["job_status"] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          bad_candidate_attributes?: string | null
+          created_at?: string
+          description?: string
+          essential_attributes?: string[] | null
+          good_candidate_attributes?: string | null
+          id?: string
+          llm_suggested_attributes?: string[] | null
+          recruiter_id?: string
+          status?: Database["public"]["Enums"]["job_status"] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_recruiter_id_fkey"
+            columns: ["recruiter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -44,6 +148,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      job_status: "draft" | "published" | "archived"
       user_role: "recruiter" | "candidate"
     }
     CompositeTypes: {

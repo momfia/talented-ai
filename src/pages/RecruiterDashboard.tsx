@@ -1,24 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
 
-type Application = {
-  id: string;
-  job_id: string;
-  candidate_id: string;
-  status: string;
-  assessment_score: number;
-  reference_verified: boolean;
-  key_attributes: Record<string, any>;
-  created_at: string;
-};
-
-type Job = {
-  id: string;
-  title: string;
-};
+type Application = Database['public']['Tables']['applications']['Row'];
+type Job = Database['public']['Tables']['jobs']['Row'];
 
 export default function RecruiterDashboard() {
   const [applications, setApplications] = useState<Application[]>([]);

@@ -130,7 +130,7 @@ export function JobForm() {
             <div className="flex items-center gap-4">
               <input
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf,.doc,.docx,.html,.htm"
                 onChange={handleFileUpload}
                 className="hidden"
                 id="file-upload"
@@ -152,6 +152,9 @@ export function JobForm() {
               </Button>
               {isProcessing && <p className="text-sm text-muted-foreground">Extracting job description...</p>}
             </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Accepted formats: PDF, DOC, DOCX, HTML
+            </p>
           </div>
 
           <div className="space-y-2">

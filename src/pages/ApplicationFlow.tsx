@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -360,14 +359,23 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
       
-      const { data: { url }, error: urlError } = await supabase.functions
+      const { data, error } = await supabase.functions
         .invoke('get-interview-agent-url', {
           body: { applicationId }
         });
 
-      if (urlError) throw urlError;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      await conversation.startSession({ url });
+      if (!data?.url) {
+        console.error('No URL returned:', data);
+        throw new Error('Failed to get interview URL');
+      }
+
+      console.log('Starting interview with URL:', data.url);
+      await conversation.startSession({ url: data.url });
 
       toast({
         title: "Interview started",
@@ -377,7 +385,7 @@ export default function ApplicationFlow() {
       console.error('Error starting interview:', error);
       toast({
         title: "Error starting interview",
-        description: "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
     } finally {

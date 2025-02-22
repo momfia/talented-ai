@@ -1,5 +1,5 @@
-
-import OpenAI from 'openai';
+import { createParser } from 'eventsource-parser';
+import { OpenAI } from 'openai';
 
 export async function analyzeJob(jobDescription: string) {
   const openai = new OpenAI({

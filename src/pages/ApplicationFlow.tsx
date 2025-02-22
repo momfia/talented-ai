@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -49,18 +50,19 @@ export default function ApplicationFlow() {
       try {
         console.log('Loading application for job:', jobId, 'candidate:', candidateId);
         
-        const { data: application, error } = await supabase
+        const { data: applications, error } = await supabase
           .from('applications')
           .select('*')
           .eq('job_id', jobId)
           .eq('candidate_id', candidateId)
           .order('created_at', { ascending: false })
-          .maybeSingle();
+          .limit(1);
 
         if (error) {
           throw error;
         }
 
+        const application = applications?.[0];
         if (application) {
           console.log('Found application:', application);
           setApplicationId(application.id);
@@ -121,20 +123,23 @@ export default function ApplicationFlow() {
       
       if (!currentApplicationId) {
         // First check if there's an existing application
-        const { data: existingApplication } = await supabase
+        const { data: applications, error: queryError } = await supabase
           .from('applications')
           .select('*')
           .eq('job_id', jobId)
           .eq('candidate_id', userId)
           .order('created_at', { ascending: false })
-          .maybeSingle();
+          .limit(1);
 
+        if (queryError) throw queryError;
+
+        const existingApplication = applications?.[0];
         if (existingApplication) {
           currentApplicationId = existingApplication.id;
           setApplicationId(existingApplication.id);
         } else {
           // Create new application if none exists
-          const { data: newApplication, error: applicationError } = await supabase
+          const { data: newApplications, error: applicationError } = await supabase
             .from('applications')
             .insert({
               job_id: jobId,
@@ -142,12 +147,13 @@ export default function ApplicationFlow() {
               status: 'in_progress'
             })
             .select()
-            .single();
+            .limit(1);
 
           if (applicationError) throw applicationError;
+          if (!newApplications?.[0]) throw new Error('Failed to create application');
           
-          currentApplicationId = newApplication.id;
-          setApplicationId(newApplication.id);
+          currentApplicationId = newApplications[0].id;
+          setApplicationId(newApplications[0].id);
         }
       }
 
@@ -294,13 +300,13 @@ export default function ApplicationFlow() {
       setIsProcessing(true);
 
       // Get the current application to ensure it exists
-      const { data: application, error: fetchError } = await supabase
+      const { data: applications, error: fetchError } = await supabase
         .from('applications')
         .select('*')
         .eq('id', applicationId)
-        .single();
+        .limit(1);
 
-      if (fetchError || !application) {
+      if (fetchError || !applications?.[0]) {
         throw new Error('Application not found');
       }
 

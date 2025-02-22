@@ -248,6 +248,32 @@ export default function JobDetails() {
             Back to Jobs
           </Button>
           <div className="flex gap-2">
+            {isEditing && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isProcessing}
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  {isProcessing ? (
+                    "Processing..."
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload JD
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
             {job.status === 'published' && (
               <Button
                 variant="outline"
@@ -302,6 +328,11 @@ export default function JobDetails() {
             <CardTitle className="flex items-center gap-2">
               <Settings2 className="h-5 w-5" />
               Job Settings
+              {isProcessing && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  Processing document...
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">

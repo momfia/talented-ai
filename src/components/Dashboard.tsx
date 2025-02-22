@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { RoleSwitch } from './RoleSwitch';
 
 type Profile = {
   id: string;
@@ -40,6 +41,12 @@ export function Dashboard() {
     getProfile();
   }, []);
 
+  const handleRoleChange = (newRole: 'recruiter' | 'candidate') => {
+    if (profile) {
+      setProfile({ ...profile, role: newRole });
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
@@ -50,7 +57,10 @@ export function Dashboard() {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Welcome{profile.full_name ? `, ${profile.full_name}` : ''}!</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Welcome{profile.full_name ? `, ${profile.full_name}` : ''}!</h1>
+        <RoleSwitch currentRole={profile.role} onRoleChange={handleRoleChange} />
+      </div>
       
       {profile.role === 'recruiter' ? (
         <div className="grid gap-6 md:grid-cols-2">

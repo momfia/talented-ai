@@ -463,6 +463,8 @@ export default function ApplicationFlow() {
 
       console.log('Starting interview with context:', interviewContext);
 
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
       await conversation.startSession({ 
         agentId: "G52f0rQiQ6VkynMm9PBX",
         overrides: {

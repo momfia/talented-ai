@@ -7,8 +7,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function truncateText(text: string, maxLength = 4000): string {
+  if (text.length <= maxLength) return text;
+  
+  // Find the last period before maxLength to maintain coherent text
+  const lastPeriod = text.lastIndexOf('.', maxLength);
+  return text.substring(0, lastPeriod + 1);
+}
+
 async function processWithAI(text: string): Promise<any> {
   try {
+    // Truncate text to avoid token limit issues
+    const truncatedText = truncateText(text);
+    
     const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,15 +52,17 @@ async function processWithAI(text: string): Promise<any> {
             - essential_attributes (array of strings)
             - good_candidate_attributes (string)
             - bad_candidate_attributes (string)
+
+            Note: Keep your response concise and within token limits.
             `
           },
           {
             role: "user",
-            content: text
+            content: truncatedText
           }
         ],
         temperature: 0.5,
-        max_tokens: 2000
+        max_tokens: 1000
       })
     });
 

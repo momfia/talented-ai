@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export default function ApplicationFlow() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check authentication status
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -53,7 +51,6 @@ export default function ApplicationFlow() {
     try {
       setIsUploading(true);
       
-      // Create application record
       const { data: application, error: applicationError } = await supabase
         .from('applications')
         .insert({
@@ -68,7 +65,6 @@ export default function ApplicationFlow() {
       
       setApplicationId(application.id);
 
-      // Upload resume
       const filePath = `${application.id}/resume/${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('applications')
@@ -76,7 +72,6 @@ export default function ApplicationFlow() {
 
       if (uploadError) throw uploadError;
 
-      // Update application
       const { error: updateError } = await supabase
         .from('applications')
         .update({
@@ -107,6 +102,24 @@ export default function ApplicationFlow() {
     }
   };
 
+  const getSupportedMimeType = () => {
+    const types = [
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=h264,opus',
+      'video/webm'
+    ];
+    
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log('Using MIME type:', type);
+        return type;
+      }
+    }
+    console.error('No supported MIME type found');
+    return 'video/webm'; // Fallback
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -117,33 +130,43 @@ export default function ApplicationFlow() {
           noiseSuppression: true,
           autoGainControl: true
         },
-        video: true
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.muted = true;
       }
 
-      // Specify the MIME type for WebM with audio codec
+      const mimeType = getSupportedMimeType();
+      console.log('Recording started with MIME type:', mimeType);
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus'
+        mimeType,
+        videoBitsPerSecond: 2500000, // 2.5 Mbps
+        audioBitsPerSecond: 128000    // 128 kbps
       });
       
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-      setRecordedBlob(null);
-      setShowPreview(false);
 
       mediaRecorder.ondataavailable = (e) => {
+        console.log('Data available event, size:', e.data.size);
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
 
       mediaRecorder.onstop = () => {
+        console.log('Recording stopped, creating blob...');
         const videoBlob = new Blob(chunksRef.current, { 
-          type: 'video/webm' 
+          type: mimeType
         });
+        console.log('Created video blob of size:', videoBlob.size);
+        
         setRecordedBlob(videoBlob);
         setShowPreview(true);
         if (videoRef.current) {
@@ -155,10 +178,9 @@ export default function ApplicationFlow() {
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // Get data every second
       setIsRecording(true);
 
-      // Stop recording after 1 minute
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           stopRecording();
@@ -187,18 +209,16 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
-      // Upload video with a unique name to prevent conflicts
       const timestamp = new Date().getTime();
       const filePath = `${applicationId}/video/introduction_${timestamp}.webm`;
       const { error: uploadError } = await supabase.storage
         .from('applications')
         .upload(filePath, recordedBlob, {
-          upsert: true // Allow overwriting if file exists
+          upsert: true
         });
 
       if (uploadError) throw uploadError;
 
-      // Process video with AI
       const { data: aiAnalysis, error: aiError } = await supabase.functions
         .invoke('analyze-video', {
           body: { applicationId, videoPath: filePath }
@@ -206,7 +226,6 @@ export default function ApplicationFlow() {
 
       if (aiError) throw aiError;
 
-      // Update application
       const { error: updateError } = await supabase
         .from('applications')
         .update({
@@ -250,7 +269,6 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
       
-      // Get the signed URL for the agent
       const { data: { url }, error: urlError } = await supabase.functions
         .invoke('get-interview-agent-url', {
           body: { applicationId }
@@ -258,7 +276,6 @@ export default function ApplicationFlow() {
 
       if (urlError) throw urlError;
 
-      // Start the conversation with the ElevenLabs agent
       await conversation.startSession({ url });
 
       toast({
@@ -283,7 +300,6 @@ export default function ApplicationFlow() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="border-b bg-white">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center gap-2">
@@ -295,7 +311,6 @@ export default function ApplicationFlow() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="container mx-auto p-6">
         <div className="max-w-2xl mx-auto">
           <Card>
@@ -303,7 +318,6 @@ export default function ApplicationFlow() {
               <CardTitle>Job Application Process</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Step 1: Resume Upload */}
               <div className={`space-y-4 ${currentStep !== 'resume' && 'opacity-50'}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
@@ -343,7 +357,6 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              {/* Step 2: Video Introduction */}
               <div className={`space-y-4 ${currentStep !== 'video' && 'opacity-50'}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
@@ -409,7 +422,6 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              {/* Step 3: AI Interview */}
               <div className={`space-y-4 ${currentStep !== 'interview' && 'opacity-50'}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>

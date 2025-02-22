@@ -1,6 +1,29 @@
 
-export const ELEVEN_LABS_API_KEY = import.meta.env.VITE_ELEVEN_LABS_API_KEY || '';
+import { supabase } from "@/integrations/supabase/client";
 
-if (!ELEVEN_LABS_API_KEY) {
-  console.error('Missing ELEVEN_LABS_API_KEY environment variable');
-}
+export const ELEVEN_LABS_API_KEY = '';
+
+// Get the API key from Supabase secrets
+const loadApiKey = async () => {
+  const { data, error } = await supabase
+    .functions.invoke('get-secret', {
+      body: { secretName: 'ELEVEN_LABS_API_KEY' }
+    });
+  
+  if (error) {
+    console.error('Error loading ElevenLabs API key:', error);
+    return;
+  }
+  
+  if (data?.secret) {
+    Object.defineProperty(exports, 'ELEVEN_LABS_API_KEY', {
+      value: data.secret,
+      writable: false,
+      configurable: false
+    });
+  } else {
+    console.error('Missing ELEVEN_LABS_API_KEY secret');
+  }
+};
+
+loadApiKey();

@@ -99,13 +99,24 @@ export default function PublicJobView() {
   if (!job) return null;
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">{job.title}</h1>
+            <FileUpload
+              endpoint="resume"
+              onProcessed={handleFileUpload}
+              allowedFileTypes={['application/pdf']}
+              maxSize={5 * 1024 * 1024} // 5MB
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-8">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{job.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6">
             <div>
               <h3 className="font-semibold mb-2">Job Description</h3>
               <div className="text-muted-foreground whitespace-pre-wrap">
@@ -123,16 +134,6 @@ export default function PublicJobView() {
                 </ul>
               </div>
             )}
-
-            <div className="pt-6 border-t">
-              <h3 className="font-semibold mb-4">Apply for this Position</h3>
-              <FileUpload
-                endpoint="resume"
-                onUploadComplete={handleFileUpload}
-                allowedFileTypes={['application/pdf']}
-                maxSize={5 * 1024 * 1024} // 5MB
-              />
-            </div>
           </CardContent>
         </Card>
       </div>

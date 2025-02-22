@@ -3,9 +3,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { SignUpForm } from "@/components/auth/SignUpForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -47,6 +44,9 @@ export default function Auth() {
         <h1 className="text-2xl font-bold text-center gradient-text">
           Welcome to TalentTalk
         </h1>
+        <p className="text-center text-muted-foreground">
+          Connect with professionals and find opportunities
+        </p>
         <Button 
           variant="outline" 
           className="w-full" 
@@ -54,28 +54,6 @@ export default function Auth() {
         >
           Continue with Google
         </Button>
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
-          <TabsContent value="login">
-            <LoginForm />
-          </TabsContent>
-          <TabsContent value="register">
-            <SignUpForm />
-          </TabsContent>
-        </Tabs>
       </Card>
     </div>
   );

@@ -247,35 +247,6 @@ export default function JobDetails() {
             Back to Jobs
           </Button>
           <div className="flex gap-2">
-            {isEditing && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.html,.htm"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isProcessing}
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                >
-                  {isProcessing ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload JD
-                    </>
-                  )}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Supported: PDF, DOC, DOCX, HTML
-                </span>
-              </div>
-            )}
             {job.status === 'published' && (
               <Button
                 variant="outline"
@@ -364,7 +335,9 @@ export default function JobDetails() {
                       </>
                     )}
                   </Button>
-                  {isProcessing && <p className="text-sm text-muted-foreground">Processing document...</p>}
+                  <span className="text-sm text-muted-foreground">
+                    Supported: PDF, DOC, DOCX, HTML
+                  </span>
                 </div>
               </div>
             )}

@@ -67,7 +67,7 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
     <div className="flex items-center space-x-2">
       <input
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept=".pdf,.doc,.docx,.html,.htm"
         onChange={handleFileChange}
         className="hidden"
         id="file-upload"

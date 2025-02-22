@@ -1,9 +1,10 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { RoleSwitch } from './RoleSwitch';
+import { Plus, User } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +12,6 @@ import {
   SidebarFooter,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { User } from 'lucide-react';
 
 type Profile = {
   id: string;
@@ -102,12 +102,25 @@ export function Dashboard() {
             
             {profile.role === 'recruiter' ? (
               <div className="grid gap-6 md:grid-cols-2">
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-white" onClick={() => navigate('/jobs')}>
+                <Card 
+                  className="cursor-pointer hover:shadow-lg transition-shadow bg-white relative overflow-hidden" 
+                  onClick={() => navigate('/jobs')}
+                >
                   <CardHeader>
                     <CardTitle>Job Descriptions</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">Manage your job listings and review candidate requirements.</p>
+                    <Button
+                      className="mt-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/create-job');
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create New Job
+                    </Button>
                   </CardContent>
                 </Card>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-white" onClick={() => navigate('/recruiter-dashboard')}>

@@ -108,22 +108,24 @@ export default function JobDetails() {
     if (!job) return;
 
     try {
+      const newStatus = job.status === 'published' ? 'draft' as const : 'published' as const;
+      
       const { error } = await supabase
         .from('jobs')
         .update({
-          status: job.status === 'published' ? 'draft' : 'published'
+          status: newStatus
         })
         .eq('id', id);
 
       if (error) throw error;
 
-      const updatedJob = { ...job, status: job.status === 'published' ? 'draft' : 'published' };
+      const updatedJob = { ...job, status: newStatus };
       setJob(updatedJob);
       setEditedJob(updatedJob);
 
       toast({
         title: "Success",
-        description: `Job ${job.status === 'published' ? 'unpublished' : 'published'} successfully`,
+        description: `Job ${newStatus === 'published' ? 'published' : 'unpublished'} successfully`,
       });
     } catch (error: any) {
       toast({

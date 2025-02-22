@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function PublicJobView() {
     }
   }
 
-  const handleFileUpload = async (fileInfo: { path: string }) => {
+  const handleFileUpload = async (filePath: string) => {
     try {
       setApplying(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -65,7 +66,6 @@ export default function PublicJobView() {
           job_id: id,
           candidate_id: user.id,
           status: 'pending',
-          resume_path: fileInfo.path,
           key_attributes: []
         });
 
@@ -127,9 +127,10 @@ export default function PublicJobView() {
             <div className="pt-6 border-t">
               <h3 className="font-semibold mb-4">Apply for this Position</h3>
               <FileUpload
+                endpoint="resume"
                 onUploadComplete={handleFileUpload}
-                maxSize={5 * 1024 * 1024}
-                acceptedFileTypes={['application/pdf']}
+                allowedFileTypes={['application/pdf']}
+                maxSize={5 * 1024 * 1024} // 5MB
               />
             </div>
           </CardContent>

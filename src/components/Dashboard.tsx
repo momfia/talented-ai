@@ -72,7 +72,7 @@ export function Dashboard() {
               <div className="bg-primary p-2 rounded-lg">
                 <User className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-xl">TalentMatch</span>
+              <span className="font-bold text-xl">Talented AI</span>
             </div>
           </SidebarHeader>
           <SidebarContent className="p-4">

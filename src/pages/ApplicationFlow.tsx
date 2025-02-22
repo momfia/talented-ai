@@ -418,7 +418,8 @@ export default function ApplicationFlow() {
           console.log('Audio track enabled:', track.label, track.readyState);
         });
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextClass({
           sampleRate: 24000,
           latencyHint: 'interactive'
         });
@@ -486,7 +487,7 @@ export default function ApplicationFlow() {
         overrides: {
           agent: {
             language: "en",
-            // context: JSON.stringify(interviewContext),
+            context: JSON.stringify(interviewContext),
             debug: true,
             firstMessage: "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?"
           },

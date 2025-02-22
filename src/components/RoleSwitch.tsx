@@ -19,7 +19,7 @@ export function RoleSwitch({ currentRole, onRoleChange }: Props) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  const handleRoleChange = async (newRole: string) => {
+  const handleRoleChange = async (newRole: 'recruiter' | 'candidate') => {
     try {
       setIsUpdating(true);
       
@@ -33,7 +33,7 @@ export function RoleSwitch({ currentRole, onRoleChange }: Props) {
 
       if (error) throw error;
 
-      onRoleChange(newRole as 'recruiter' | 'candidate');
+      onRoleChange(newRole);
       toast({
         title: "Role Updated",
         description: `You are now using the app as a ${newRole === 'recruiter' ? 'Recruiter' : 'Job Seeker'}`,

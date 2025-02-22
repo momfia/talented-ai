@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings2, Pencil, Archive, Trash2, Share2 } from "lucide-react";
+import { ArrowLeft, Settings2, Pencil, Upload, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -17,11 +17,13 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+type JobStatus = 'draft' | 'published' | 'archived';
+
 type Job = {
   id: string;
   title: string;
   description: string;
-  status: 'draft' | 'published' | 'archived';
+  status: JobStatus;
   created_at: string;
   essential_attributes: string[];
   good_candidate_attributes: string | null;
@@ -36,6 +38,7 @@ export default function JobDetails() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedJob, setEditedJob] = useState<Job | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     fetchJobDetails();
@@ -57,8 +60,8 @@ export default function JobDetails() {
         .single();
 
       if (error) throw error;
-      setJob(data);
-      setEditedJob(data);
+      setJob(data as Job);
+      setEditedJob(data as Job);
     } catch (error: any) {
       toast({
         title: "Error fetching job details",
@@ -70,6 +73,56 @@ export default function JobDetails() {
       setLoading(false);
     }
   }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsProcessing(true);
+      
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('job-documents')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Process the uploaded document
+      const { data, error } = await supabase.functions.invoke('process-job-document', {
+        body: { filePath: uploadData.path }
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setEditedJob(prev => prev ? {
+          ...prev,
+          description: data.description,
+          essential_attributes: data.essential_attributes,
+          good_candidate_attributes: data.good_candidate_attributes,
+          bad_candidate_attributes: data.bad_candidate_attributes
+        } : null);
+
+        toast({
+          title: "Success",
+          description: "Job description processed successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error processing document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!editedJob) return;
@@ -108,22 +161,24 @@ export default function JobDetails() {
     if (!job) return;
 
     try {
+      const newStatus: JobStatus = job.status === 'published' ? 'draft' : 'published';
+      
       const { error } = await supabase
         .from('jobs')
         .update({
-          status: job.status === 'published' ? 'draft' : 'published'
+          status: newStatus
         })
         .eq('id', id);
 
       if (error) throw error;
 
-      const updatedJob = { ...job, status: job.status === 'published' ? 'draft' : 'published' };
+      const updatedJob = { ...job, status: newStatus };
       setJob(updatedJob);
       setEditedJob(updatedJob);
 
       toast({
         title: "Success",
-        description: `Job ${job.status === 'published' ? 'unpublished' : 'published'} successfully`,
+        description: `Job ${newStatus === 'published' ? 'published' : 'unpublished'} successfully`,
       });
     } catch (error: any) {
       toast({
@@ -250,12 +305,43 @@ export default function JobDetails() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {isEditing && (
+              <div className="space-y-2 mb-6">
+                <Label>Upload Revised Job Description</Label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isProcessing}
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                  >
+                    {isProcessing ? (
+                      "Processing..."
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload JD
+                      </>
+                    )}
+                  </Button>
+                  {isProcessing && <p className="text-sm text-muted-foreground">Processing document...</p>}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Status</Label>
               {isEditing ? (
                 <Select
                   value={editedJob?.status}
-                  onValueChange={(value: 'draft' | 'published' | 'archived') =>
+                  onValueChange={(value: JobStatus) =>
                     setEditedJob(prev => prev ? { ...prev, status: value } : null)
                   }
                 >

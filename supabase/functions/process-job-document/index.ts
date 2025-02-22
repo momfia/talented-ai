@@ -8,17 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const CHUNK_SIZE = 4000;
-
-function chunkText(text: string): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += CHUNK_SIZE) {
-    chunks.push(text.slice(i, i + CHUNK_SIZE));
-  }
-  return chunks;
-}
-
-async function processChunkWithAI(chunk: string): Promise<any> {
+async function processWithAI(text: string): Promise<any> {
   const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -30,23 +20,36 @@ async function processChunkWithAI(chunk: string): Promise<any> {
       messages: [
         {
           role: "system",
-          content: `You are a professional job description analyzer. Structure the job description into these sections:
-          1. Overview: A brief 2-3 sentence summary of the role
-          2. Key Responsibilities: List of 4-6 main responsibilities
-          3. Required Qualifications: List of must-have qualifications
-          4. Preferred Qualifications (if any): List of nice-to-have qualifications
-          5. Benefits & Perks (if mentioned): List of benefits
+          content: `Analyze this job description and extract the following information in a structured format:
 
-          Format each section with clear headings and bullet points where appropriate.
-          Be concise and clear. Remove any redundant or unnecessary information.`
+          1. Create a well-formatted job description with:
+             - Overview (2-3 sentences)
+             - Key Responsibilities (4-6 bullet points)
+             - Technical Requirements
+             - Additional Requirements
+
+          2. Extract a list of 5-8 essential attributes that a candidate must have
+
+          3. Create a brief description of what makes a good candidate for this role
+             Focus on soft skills, personality traits, and working style
+
+          4. Create a brief description of what would make a bad candidate for this role
+             Focus on characteristics that would make someone unsuitable
+
+          Return the results as a JSON object with these keys:
+          - description (formatted text with sections)
+          - essential_attributes (array of strings)
+          - good_candidate_attributes (string)
+          - bad_candidate_attributes (string)
+          `
         },
         {
           role: "user",
-          content: chunk
+          content: text
         }
       ],
       temperature: 0.5,
-      max_tokens: 1000
+      max_tokens: 2000
     })
   });
 
@@ -56,7 +59,14 @@ async function processChunkWithAI(chunk: string): Promise<any> {
   }
 
   const openAiData = await openAiResponse.json();
-  return openAiData.choices[0].message.content;
+  const content = openAiData.choices[0].message.content;
+  
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    console.error('Error parsing OpenAI response:', error);
+    throw new Error('Failed to parse AI response');
+  }
 }
 
 serve(async (req) => {
@@ -67,13 +77,11 @@ serve(async (req) => {
   try {
     const { filePath } = await req.json()
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Download the file
     const { data: fileData, error: downloadError } = await supabaseClient
       .storage
       .from('job-documents')
@@ -83,31 +91,15 @@ serve(async (req) => {
       throw downloadError
     }
 
-    // Convert the file to text
     const text = await fileData.text()
     
-    // Split text into manageable chunks
-    const chunks = chunkText(text);
-    console.log(`Processing document in ${chunks.length} chunks`);
-
-    // Process each chunk
-    const processedChunks = await Promise.all(
-      chunks.map(chunk => processChunkWithAI(chunk))
-    );
-
-    // Combine and structure the processed chunks
-    const combinedContent = processedChunks.join('\n\n');
-
-    // Process the combined content one final time to ensure consistency
-    const finalProcessedContent = await processChunkWithAI(combinedContent);
-
-    // Extract the sections we want from the final processed content
-    const description = finalProcessedContent;
+    // Process the text with AI
+    const processedData = await processWithAI(text);
 
     console.log('Document processed successfully');
 
     return new Response(
-      JSON.stringify({ description }),
+      JSON.stringify(processedData),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

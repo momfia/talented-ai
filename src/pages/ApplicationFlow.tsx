@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Upload, Video, PhoneCall } from "lucide-react";
+import { Loader2, Upload, Video, PhoneCall, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
 
@@ -237,131 +237,146 @@ export default function ApplicationFlow() {
   };
 
   if (!userId) {
-    return null; // Don't render anything while checking authentication
+    return null;
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Job Application Process</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Step 1: Resume Upload */}
-            <div className={`space-y-4 ${currentStep !== 'resume' && 'opacity-50'}`}>
-              <h3 className="font-semibold flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                Upload Your Resume
-              </h3>
-              {currentStep === 'resume' && (
-                <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.html,.htm"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="resume-upload"
-                    disabled={isUploading}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('resume-upload')?.click()}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Resume
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Accepted formats: PDF, DOC, DOCX
-                  </p>
-                </div>
-              )}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="border-b bg-white">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary p-2 rounded-lg">
+              <User className="h-6 w-6 text-white" />
             </div>
+            <span className="font-bold text-xl">TalentMatch</span>
+          </div>
+        </div>
+      </header>
 
-            {/* Step 2: Video Introduction */}
-            <div className={`space-y-4 ${currentStep !== 'video' && 'opacity-50'}`}>
-              <h3 className="font-semibold flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                Record Video Introduction
-              </h3>
-              {currentStep === 'video' && (
-                <div className="space-y-4">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full aspect-video bg-black rounded-lg"
-                  />
-                  <div className="flex justify-center">
+      {/* Main Content */}
+      <div className="container mx-auto p-6">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Application Process</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Step 1: Resume Upload */}
+              <div className={`space-y-4 ${currentStep !== 'resume' && 'opacity-50'}`}>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                  Upload Your Resume
+                </h3>
+                {currentStep === 'resume' && (
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.html,.htm"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="resume-upload"
+                      disabled={isUploading}
+                    />
                     <Button
-                      onClick={isRecording ? stopRecording : startRecording}
+                      variant="outline"
+                      onClick={() => document.getElementById('resume-upload')?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Resume
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Accepted formats: PDF, DOC, DOCX
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Video Introduction */}
+              <div className={`space-y-4 ${currentStep !== 'video' && 'opacity-50'}`}>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                  Record Video Introduction
+                </h3>
+                {currentStep === 'video' && (
+                  <div className="space-y-4">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full aspect-video bg-black rounded-lg"
+                    />
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : isRecording ? (
+                          <>
+                            <Video className="mr-2 h-4 w-4" />
+                            Stop Recording
+                          </>
+                        ) : (
+                          <>
+                            <Video className="mr-2 h-4 w-4" />
+                            Start Recording (1 min)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: AI Interview */}
+              <div className={`space-y-4 ${currentStep !== 'interview' && 'opacity-50'}`}>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
+                  AI Interview
+                </h3>
+                {currentStep === 'interview' && (
+                  <div className="flex flex-col items-center gap-4">
+                    <Button
+                      onClick={startInterview}
                       disabled={isProcessing}
                     >
                       {isProcessing ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : isRecording ? (
-                        <>
-                          <Video className="mr-2 h-4 w-4" />
-                          Stop Recording
+                          Connecting...
                         </>
                       ) : (
                         <>
-                          <Video className="mr-2 h-4 w-4" />
-                          Start Recording (1 min)
+                          <PhoneCall className="mr-2 h-4 w-4" />
+                          Start Interview
                         </>
                       )}
                     </Button>
+                    <p className="text-sm text-muted-foreground">
+                      You'll have a 5-minute conversation with our AI interviewer
+                    </p>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Step 3: AI Interview */}
-            <div className={`space-y-4 ${currentStep !== 'interview' && 'opacity-50'}`}>
-              <h3 className="font-semibold flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
-                AI Interview
-              </h3>
-              {currentStep === 'interview' && (
-                <div className="flex flex-col items-center gap-4">
-                  <Button
-                    onClick={startInterview}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <PhoneCall className="mr-2 h-4 w-4" />
-                        Start Interview
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    You'll have a 5-minute conversation with our AI interviewer
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -109,9 +109,20 @@ export default function ApplicationFlow() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 24000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: true
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Mute the video element to prevent feedback
+        videoRef.current.muted = true;
       }
 
       const mediaRecorder = new MediaRecorder(stream);
@@ -133,6 +144,8 @@ export default function ApplicationFlow() {
         if (videoRef.current) {
           videoRef.current.srcObject = null;
           videoRef.current.src = URL.createObjectURL(videoBlob);
+          // Unmute for preview playback
+          videoRef.current.muted = false;
         }
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());

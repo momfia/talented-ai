@@ -7,6 +7,7 @@ import { JobForm } from "@/components/JobForm";
 import JobManagement from "@/pages/JobManagement";
 import JobDetails from "@/pages/JobDetails";
 import PublicJobView from "@/pages/PublicJobView";
+import ApplicationFlow from "@/pages/ApplicationFlow";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/jobs" element={<JobManagement />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/jobs/:id/apply" element={<PublicJobView />} />
+        <Route path="/apply/:jobId" element={<ApplicationFlow />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />

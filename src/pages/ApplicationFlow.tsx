@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -359,12 +360,64 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
-      // Initialize conversation with direct agent ID
+      // Fetch job and application details
+      if (!applicationId || !jobId) {
+        throw new Error('Missing application or job ID');
+      }
+
+      // Get job details
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select(`
+          title,
+          description,
+          essential_attributes,
+          good_candidate_attributes,
+          bad_candidate_attributes
+        `)
+        .eq('id', jobId)
+        .single();
+
+      if (jobError) throw jobError;
+
+      // Get application details including AI analysis
+      const { data: applicationData, error: applicationError } = await supabase
+        .from('applications')
+        .select(`
+          resume_path,
+          video_path,
+          ai_analysis,
+          key_attributes
+        `)
+        .eq('id', applicationId)
+        .single();
+
+      if (applicationError) throw applicationError;
+
+      // Prepare context for the interview agent
+      const interviewContext = {
+        job: {
+          title: jobData.title,
+          description: jobData.description,
+          essentialAttributes: jobData.essential_attributes || [],
+          goodCandidateAttributes: jobData.good_candidate_attributes,
+          badCandidateAttributes: jobData.bad_candidate_attributes
+        },
+        candidate: {
+          keyAttributes: applicationData.key_attributes,
+          aiAnalysis: applicationData.ai_analysis
+        }
+      };
+
+      console.log('Starting interview with context:', interviewContext);
+
+      // Initialize conversation with context
       await conversation.startSession({ 
         agentId: "G52f0rQiQ6VkynMm9PBX",
         overrides: {
           agent: {
             language: "en",
+            context: JSON.stringify(interviewContext)
           },
           tts: {
             voiceId: "pNInz6obpgDQGcFmaJgB", // Default interviewer voice
@@ -378,17 +431,15 @@ export default function ApplicationFlow() {
       });
 
       // Update application status
-      if (applicationId) {
-        const { error: updateError } = await supabase
-          .from('applications')
-          .update({
-            status: 'interview_started',
-          })
-          .eq('id', applicationId);
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update({
+          status: 'interview_started',
+        })
+        .eq('id', applicationId);
 
-        if (updateError) {
-          console.error('Error updating application status:', updateError);
-        }
+      if (updateError) {
+        console.error('Error updating application status:', updateError);
       }
     } catch (error) {
       console.error('Error starting interview:', error);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -23,14 +22,23 @@ export default function JobForm() {
     bad_candidate_attributes: '',
     essential_attributes: [] as string[],
     llm_suggested_attributes: [] as string[],
-    status: 'draft' as 'draft' | 'published' | 'archived'
+    status: 'draft' as 'draft' | 'published' | 'archived',
+    recruiter_id: '' // This will be set when submitting
   });
 
   useEffect(() => {
     if (id) {
       fetchJob();
     }
+    getCurrentUser();
   }, [id]);
+
+  async function getCurrentUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setFormData(prev => ({ ...prev, recruiter_id: session.user.id }));
+    }
+  }
 
   async function fetchJob() {
     try {
@@ -99,14 +107,22 @@ export default function JobForm() {
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("No authenticated user found");
+
+      const jobData = {
+        ...formData,
+        recruiter_id: session.user.id
+      };
+
       const { error } = id
         ? await supabase
             .from('jobs')
-            .update(formData)
+            .update(jobData)
             .eq('id', id)
         : await supabase
             .from('jobs')
-            .insert([formData]);
+            .insert(jobData);
 
       if (error) throw error;
 

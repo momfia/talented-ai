@@ -20,7 +20,7 @@ export default function RecruiterDashboard() {
   async function fetchData() {
     try {
       const [jobsResponse, applicationsResponse] = await Promise.all([
-        supabase.from('jobs').select('id, title'),
+        supabase.from('jobs').select('*'),
         supabase.from('applications').select('*')
       ]);
 

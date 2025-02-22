@@ -20,9 +20,9 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
-    // Get the signed URL from ElevenLabs
+    // Get the signed URL from ElevenLabs with the agent ID
     const response = await fetch(
-      "https://api.elevenlabs.io/v1/conversation/get_signed_url",
+      "https://api.elevenlabs.io/v1/conversation/get_signed_url?agent_id=your_agent_id_here", // Replace with your agent ID
       {
         method: "GET",
         headers: {

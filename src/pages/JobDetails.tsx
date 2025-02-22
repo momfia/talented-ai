@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings2, Pencil, Archive, Trash2 } from "lucide-react";
+import { ArrowLeft, Settings2, Pencil, Archive, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -104,6 +104,45 @@ export default function JobDetails() {
     }
   };
 
+  const handlePublish = async () => {
+    if (!job) return;
+
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          status: job.status === 'published' ? 'draft' : 'published'
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updatedJob = { ...job, status: job.status === 'published' ? 'draft' : 'published' };
+      setJob(updatedJob);
+      setEditedJob(updatedJob);
+
+      toast({
+        title: "Success",
+        description: `Job ${job.status === 'published' ? 'unpublished' : 'published'} successfully`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error updating job status",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const copyPublicLink = () => {
+    const url = `${window.location.origin}/jobs/${id}/apply`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied!",
+      description: "The public job link has been copied to your clipboard.",
+    });
+  };
+
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this job posting?')) return;
 
@@ -154,6 +193,21 @@ export default function JobDetails() {
             Back to Jobs
           </Button>
           <div className="flex gap-2">
+            {job.status === 'published' && (
+              <Button
+                variant="outline"
+                onClick={copyPublicLink}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Link
+              </Button>
+            )}
+            <Button
+              variant={job.status === 'published' ? 'outline' : 'default'}
+              onClick={handlePublish}
+            >
+              {job.status === 'published' ? 'Unpublish' : 'Publish'}
+            </Button>
             {isEditing ? (
               <>
                 <Button onClick={handleSave}>Save Changes</Button>

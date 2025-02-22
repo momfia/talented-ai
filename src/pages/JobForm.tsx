@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { FileUpload } from "@/components/FileUpload";
 
 const jobFormSchema = z.object({
   title: z.string()
@@ -309,6 +310,24 @@ export default function JobForm() {
                 )}
               />
 
+              <div className="flex justify-between items-center mb-6">
+                <FileUpload 
+                  onProcessed={(data) => {
+                    form.setValue('title', data.title);
+                    form.setValue('description', data.description);
+                    form.setValue('essential_attributes', data.attributes);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => analyzeCandidateAttributes(form.getValues())}
+                  disabled={analyzing || !form.getValues('title') || !form.getValues('description')}
+                >
+                  {analyzing ? 'Analyzing...' : 'Analyze with AI'}
+                </Button>
+              </div>
+
               <div className="space-y-4">
                 <Label>Essential Attributes</Label>
                 <DraggableAttributes
@@ -318,14 +337,6 @@ export default function JobForm() {
               </div>
 
               <div className="flex space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => analyzeCandidateAttributes(form.getValues())}
-                  disabled={analyzing || !form.getValues('title') || !form.getValues('description')}
-                >
-                  {analyzing ? 'Analyzing...' : 'Analyze with AI'}
-                </Button>
                 <Button 
                   type="submit"
                   disabled={analyzing || !form.formState.isValid}

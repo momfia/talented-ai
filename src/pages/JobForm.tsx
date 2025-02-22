@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from "react-hook-form";
@@ -12,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { DraggableAttributes } from "@/components/DraggableAttributes";
 import {
   Form,
   FormControl,
@@ -37,7 +37,7 @@ const jobFormSchema = z.object({
   status: z.enum(['draft', 'published', 'archived']),
   essential_attributes: z.array(z.string()).default([]),
   llm_suggested_attributes: z.array(z.string()).default([]),
-  recruiter_id: z.string().optional()
+  recruiter_id: z.string()
 });
 
 type JobFormValues = z.infer<typeof jobFormSchema>;
@@ -58,6 +58,7 @@ export default function JobForm() {
       status: 'draft',
       essential_attributes: [],
       llm_suggested_attributes: [],
+      recruiter_id: '',
     },
   });
 
@@ -98,7 +99,6 @@ export default function JobForm() {
 
       if (error) throw error;
       if (data) {
-        // Update form with existing data
         Object.entries(data).forEach(([key, value]) => {
           form.setValue(key as keyof JobFormValues, value);
         });
@@ -167,7 +167,7 @@ export default function JobForm() {
 
       const jobData = {
         ...data,
-        recruiter_id: session.user.id
+        recruiter_id: session.user.id,
       };
 
       const { error } = id
@@ -194,6 +194,13 @@ export default function JobForm() {
       });
     }
   }
+
+  const handleAttributesChange = (newAttributes: string[]) => {
+    form.setValue('essential_attributes', newAttributes, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -302,6 +309,14 @@ export default function JobForm() {
                 )}
               />
 
+              <div className="space-y-4">
+                <Label>Essential Attributes</Label>
+                <DraggableAttributes
+                  attributes={form.watch('essential_attributes')}
+                  onChange={handleAttributesChange}
+                />
+              </div>
+
               <div className="flex space-x-4">
                 <Button
                   type="button"
@@ -319,14 +334,19 @@ export default function JobForm() {
                 </Button>
               </div>
 
-              {form.getValues('llm_suggested_attributes').length > 0 && (
+              {form.watch('llm_suggested_attributes').length > 0 && (
                 <div>
                   <Label>AI Suggested Attributes</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {form.getValues('llm_suggested_attributes').map((attr, index) => (
+                    {form.watch('llm_suggested_attributes').map((attr, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary"
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
+                        onClick={() => {
+                          if (!form.getValues('essential_attributes').includes(attr)) {
+                            handleAttributesChange([...form.getValues('essential_attributes'), attr]);
+                          }
+                        }}
                       >
                         {attr}
                       </span>

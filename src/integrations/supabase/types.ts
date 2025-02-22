@@ -11,40 +11,55 @@ export type Database = {
     Tables: {
       applications: {
         Row: {
+          ai_analysis: Json | null
           assessment_score: number | null
           candidate_id: string
           conversation_transcript: string | null
           created_at: string
           id: string
+          interview_feedback: string | null
+          interview_transcript: string | null
           job_id: string
           key_attributes: Json | null
           reference_verified: boolean | null
+          resume_path: string | null
           status: string
           updated_at: string
+          video_path: string | null
         }
         Insert: {
+          ai_analysis?: Json | null
           assessment_score?: number | null
           candidate_id: string
           conversation_transcript?: string | null
           created_at?: string
           id?: string
+          interview_feedback?: string | null
+          interview_transcript?: string | null
           job_id: string
           key_attributes?: Json | null
           reference_verified?: boolean | null
+          resume_path?: string | null
           status?: string
           updated_at?: string
+          video_path?: string | null
         }
         Update: {
+          ai_analysis?: Json | null
           assessment_score?: number | null
           candidate_id?: string
           conversation_transcript?: string | null
           created_at?: string
           id?: string
+          interview_feedback?: string | null
+          interview_transcript?: string | null
           job_id?: string
           key_attributes?: Json | null
           reference_verified?: boolean | null
+          resume_path?: string | null
           status?: string
           updated_at?: string
+          video_path?: string | null
         }
         Relationships: [
           {

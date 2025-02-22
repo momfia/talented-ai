@@ -257,7 +257,7 @@ export default function ApplicationFlow() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 24000,
+          sampleRate: 16000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -408,7 +408,7 @@ export default function ApplicationFlow() {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 24000,
+            sampleRate: 16000,
             channelCount: 1
           }
         });
@@ -420,7 +420,7 @@ export default function ApplicationFlow() {
 
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         const audioContext = new AudioContextClass({
-          sampleRate: 24000,
+          sampleRate: 16000,
           latencyHint: 'interactive'
         });
         const source = audioContext.createMediaStreamSource(audioStream);

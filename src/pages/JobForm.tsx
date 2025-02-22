@@ -1,5 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,22 +12,53 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const jobFormSchema = z.object({
+  title: z.string()
+    .min(3, "Title must be at least 3 characters")
+    .max(100, "Title must not exceed 100 characters"),
+  description: z.string()
+    .min(50, "Description must be at least 50 characters")
+    .max(2000, "Description must not exceed 2000 characters"),
+  good_candidate_attributes: z.string()
+    .max(1000, "Good candidate attributes must not exceed 1000 characters")
+    .optional(),
+  bad_candidate_attributes: z.string()
+    .max(1000, "Bad candidate attributes must not exceed 1000 characters")
+    .optional(),
+  status: z.enum(['draft', 'published', 'archived']),
+  essential_attributes: z.array(z.string()).default([]),
+  llm_suggested_attributes: z.array(z.string()).default([]),
+  recruiter_id: z.string().optional()
+});
+
+type JobFormValues = z.infer<typeof jobFormSchema>;
 
 export default function JobForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    good_candidate_attributes: '',
-    bad_candidate_attributes: '',
-    essential_attributes: [] as string[],
-    llm_suggested_attributes: [] as string[],
-    status: 'draft' as 'draft' | 'published' | 'archived',
-    recruiter_id: '' // This will be set when submitting
+
+  const form = useForm<JobFormValues>({
+    resolver: zodResolver(jobFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      good_candidate_attributes: '',
+      bad_candidate_attributes: '',
+      status: 'draft',
+      essential_attributes: [],
+      llm_suggested_attributes: [],
+    },
   });
 
   useEffect(() => {
@@ -34,9 +69,22 @@ export default function JobForm() {
   }, [id]);
 
   async function getCurrentUser() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      setFormData(prev => ({ ...prev, recruiter_id: session.user.id }));
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      
+      if (session?.user) {
+        form.setValue('recruiter_id', session.user.id);
+      } else {
+        throw new Error("No authenticated user found");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Authentication Error",
+        description: "Please sign in to create or edit jobs",
+        variant: "destructive"
+      });
+      navigate('/auth');
     }
   }
 
@@ -50,7 +98,10 @@ export default function JobForm() {
 
       if (error) throw error;
       if (data) {
-        setFormData(data);
+        // Update form with existing data
+        Object.entries(data).forEach(([key, value]) => {
+          form.setValue(key as keyof JobFormValues, value);
+        });
       }
     } catch (error: any) {
       toast({
@@ -58,38 +109,43 @@ export default function JobForm() {
         description: error.message,
         variant: "destructive"
       });
+      navigate('/jobs');
     }
   }
 
-  async function analyzeCandidateAttributes() {
+  async function analyzeCandidateAttributes(data: JobFormValues) {
     try {
       setAnalyzing(true);
-      const response = await fetch('/functions/v1/analyze-job', {
+      const response = await fetch('/api/analyze-job', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          goodAttributes: formData.good_candidate_attributes,
-          badAttributes: formData.bad_candidate_attributes,
+          title: data.title,
+          description: data.description,
+          goodAttributes: data.good_candidate_attributes,
+          badAttributes: data.bad_candidate_attributes,
         }),
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.statusText}`);
+      }
 
-      setFormData(prev => ({
-        ...prev,
-        llm_suggested_attributes: data.suggestedAttributes,
-        essential_attributes: [...prev.essential_attributes, ...data.suggestedAttributes]
-      }));
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+
+      const newAttributes = result.suggestedAttributes;
+      form.setValue('llm_suggested_attributes', newAttributes);
+      form.setValue('essential_attributes', [
+        ...form.getValues('essential_attributes'),
+        ...newAttributes
+      ]);
 
       toast({
         title: "Analysis Complete",
-        description: "Suggested attributes have been added to essential attributes.",
+        description: "AI suggestions have been added to essential attributes.",
       });
     } catch (error: any) {
       toast({
@@ -102,16 +158,15 @@ export default function JobForm() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-
+  async function onSubmit(data: JobFormValues) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("No authenticated user found");
+      if (!session?.user) {
+        throw new Error("No authenticated user found");
+      }
 
       const jobData = {
-        ...formData,
+        ...data,
         recruiter_id: session.user.id
       };
 
@@ -122,7 +177,7 @@ export default function JobForm() {
             .eq('id', id)
         : await supabase
             .from('jobs')
-            .insert(jobData);
+            .insert([jobData]);
 
       if (error) throw error;
 
@@ -137,8 +192,6 @@ export default function JobForm() {
         description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -149,102 +202,140 @@ export default function JobForm() {
           <CardTitle>{id ? 'Edit Job' : 'Create New Job'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="title">Job Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div>
-              <Label htmlFor="description">Job Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="h-32"
-                required
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field}
+                        className="h-32"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div>
-              <Label htmlFor="good_attributes">Good Candidate Attributes</Label>
-              <Textarea
-                id="good_attributes"
-                value={formData.good_candidate_attributes || ''}
-                onChange={e => setFormData(prev => ({ ...prev, good_candidate_attributes: e.target.value }))}
-                placeholder="Describe what makes a good candidate..."
-                className="h-24"
+              <FormField
+                control={form.control}
+                name="good_candidate_attributes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Good Candidate Attributes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field}
+                        className="h-24"
+                        placeholder="Describe what makes a good candidate..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div>
-              <Label htmlFor="bad_attributes">Bad Candidate Attributes</Label>
-              <Textarea
-                id="bad_attributes"
-                value={formData.bad_candidate_attributes || ''}
-                onChange={e => setFormData(prev => ({ ...prev, bad_candidate_attributes: e.target.value }))}
-                placeholder="Describe what makes a poor candidate fit..."
-                className="h-24"
+              <FormField
+                control={form.control}
+                name="bad_candidate_attributes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bad Candidate Attributes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field}
+                        className="h-24"
+                        placeholder="Describe what makes a poor candidate fit..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div>
-              <Label>Status</Label>
-              <RadioGroup
-                value={formData.status}
-                onValueChange={value => setFormData(prev => ({ ...prev, status: value as 'draft' | 'published' | 'archived' }))}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="draft" id="draft" />
-                  <Label htmlFor="draft">Draft</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="published" id="published" />
-                  <Label htmlFor="published">Published</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="archived" id="archived" />
-                  <Label htmlFor="archived">Archived</Label>
-                </div>
-              </RadioGroup>
-            </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="draft" id="draft" />
+                          <Label htmlFor="draft">Draft</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="published" id="published" />
+                          <Label htmlFor="published">Published</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="archived" id="archived" />
+                          <Label htmlFor="archived">Archived</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="flex space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={analyzeCandidateAttributes}
-                disabled={analyzing || !formData.title || !formData.description}
-              >
-                {analyzing ? 'Analyzing...' : 'Analyze with AI'}
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : (id ? 'Update Job' : 'Create Job')}
-              </Button>
-            </div>
-
-            {formData.llm_suggested_attributes.length > 0 && (
-              <div>
-                <Label>AI Suggested Attributes</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.llm_suggested_attributes.map((attr, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary"
-                    >
-                      {attr}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => analyzeCandidateAttributes(form.getValues())}
+                  disabled={analyzing || !form.getValues('title') || !form.getValues('description')}
+                >
+                  {analyzing ? 'Analyzing...' : 'Analyze with AI'}
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={analyzing || !form.formState.isValid}
+                >
+                  {id ? 'Update Job' : 'Create Job'}
+                </Button>
               </div>
-            )}
-          </form>
+
+              {form.getValues('llm_suggested_attributes').length > 0 && (
+                <div>
+                  <Label>AI Suggested Attributes</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {form.getValues('llm_suggested_attributes').map((attr, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary"
+                      >
+                        {attr}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

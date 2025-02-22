@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw, Mic, MicOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
+import { ELEVEN_LABS_API_KEY } from '@/config/eleven-labs';
 
 type ApplicationStep = 'resume' | 'video' | 'interview';
 
@@ -24,6 +25,7 @@ export default function ApplicationFlow() {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const conversation = useConversation({
+    apiKey: ELEVEN_LABS_API_KEY,
     onConnect: () => {
       console.log('Connected to ElevenLabs websocket');
       setIsInterviewActive(true);
@@ -53,11 +55,19 @@ export default function ApplicationFlow() {
     },
     onError: (error) => {
       console.error('ElevenLabs error:', error);
-      toast({
-        title: "Interview Error",
-        description: "There was an issue with the interview connection. Please try again.",
-        variant: "destructive",
-      });
+      if (error.message?.includes('API key')) {
+        toast({
+          title: "Configuration Error",
+          description: "Missing or invalid ElevenLabs API key. Please check your configuration.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Interview Error",
+          description: "There was an issue with the interview connection. Please try again.",
+          variant: "destructive",
+        });
+      }
       setIsInterviewActive(false);
     },
   });

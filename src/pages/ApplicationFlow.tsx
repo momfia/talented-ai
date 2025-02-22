@@ -26,6 +26,7 @@ export default function ApplicationFlow() {
   const conversation = useConversation({
     onConnect: () => {
       console.log('Connected to ElevenLabs websocket');
+      setIsInterviewActive(true);
       toast({
         title: "Connected to AI Interviewer",
         description: "The interview will begin shortly",
@@ -34,17 +35,30 @@ export default function ApplicationFlow() {
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs websocket');
       setIsInterviewActive(false);
+      toast({
+        title: "Interview Disconnected",
+        description: "The connection was lost. Please try again.",
+        variant: "destructive",
+      });
     },
     onMessage: (message) => {
       console.log('Received message:', message);
+      if (message.type === 'error') {
+        toast({
+          title: "Interview Error",
+          description: message.data?.message || "An error occurred",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       console.error('ElevenLabs error:', error);
       toast({
         title: "Interview Error",
-        description: "There was an issue with the interview connection",
+        description: "There was an issue with the interview connection. Please try again.",
         variant: "destructive",
       });
+      setIsInterviewActive(false);
     },
   });
   const { isSpeaking, status } = conversation;
@@ -445,7 +459,8 @@ export default function ApplicationFlow() {
           agent: {
             language: "en",
             context: JSON.stringify(interviewContext),
-            debug: true
+            debug: true,
+            firstMessage: "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?"
           },
           tts: {
             voiceId: "pNInz6obpgDQGcFmaJgB",
@@ -459,7 +474,12 @@ export default function ApplicationFlow() {
           },
           stt: {
             sensitivity: 0.5,
-            noiseCancellation: true
+            noiseCancellation: true,
+            vadConfig: {
+              minSpeechActivity: 0.3,
+              minSilence: 0.5,
+              maxSpeechDuration: 30
+            }
           }
         }
       });
@@ -496,6 +516,7 @@ export default function ApplicationFlow() {
           variant: "destructive",
         });
       }
+      setIsInterviewActive(false);
     } finally {
       setIsProcessing(false);
     }

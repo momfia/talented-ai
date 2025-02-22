@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -77,16 +76,14 @@ export default function ApplicationFlow() {
           }
           
           // Load video preview if it exists
-          if (application.video_path) {
+          if (application.video_path && videoRef.current) {
             setShowPreview(true);
-            if (videoRef.current) {
-              const { data } = await supabase.storage
-                .from('applications')
-                .createSignedUrl(application.video_path, 3600);
-                
-              if (data?.signedUrl) {
-                videoRef.current.src = data.signedUrl;
-              }
+            const { data } = await supabase.storage
+              .from('applications')
+              .createSignedUrl(application.video_path, 3600);
+              
+            if (data?.signedUrl) {
+              videoRef.current.src = data.signedUrl;
             }
           }
         }
@@ -119,48 +116,38 @@ export default function ApplicationFlow() {
     try {
       setIsUploading(true);
       
+      // Create new application if none exists
       let currentApplicationId = applicationId;
       
       if (!currentApplicationId) {
-        // First check if there's an existing application
-        const { data: applications, error: queryError } = await supabase
+        const { data: newApplication, error: createError } = await supabase
           .from('applications')
-          .select('*')
-          .eq('job_id', jobId)
-          .eq('candidate_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .insert({
+            job_id: jobId,
+            candidate_id: userId,
+            status: 'in_progress'
+          })
+          .select()
+          .single();
 
-        if (queryError) throw queryError;
-
-        const existingApplication = applications?.[0];
-        if (existingApplication) {
-          currentApplicationId = existingApplication.id;
-          setApplicationId(existingApplication.id);
-        } else {
-          // Create new application if none exists
-          const { data: newApplications, error: applicationError } = await supabase
-            .from('applications')
-            .insert({
-              job_id: jobId,
-              candidate_id: userId,
-              status: 'in_progress'
-            })
-            .select()
-            .limit(1);
-
-          if (applicationError) throw applicationError;
-          if (!newApplications?.[0]) throw new Error('Failed to create application');
-          
-          currentApplicationId = newApplications[0].id;
-          setApplicationId(newApplications[0].id);
-        }
+        if (createError) throw createError;
+        if (!newApplication) throw new Error('Failed to create application');
+        
+        currentApplicationId = newApplication.id;
+        setApplicationId(newApplication.id);
       }
 
-      const filePath = `${currentApplicationId}/resume/${file.name}`;
+      // Generate unique file path
+      const timestamp = new Date().getTime();
+      const sanitizedFileName = file.name.replace(/[^\x00-\x7F]/g, '');
+      const fileExt = sanitizedFileName.split('.').pop();
+      const filePath = `${currentApplicationId}/resume/${timestamp}_${sanitizedFileName}`;
+
       const { error: uploadError } = await supabase.storage
         .from('applications')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true // Allow overwriting
+        });
 
       if (uploadError) throw uploadError;
 
@@ -360,7 +347,6 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
-      // Fetch job and application details
       if (!applicationId || !jobId) {
         throw new Error('Missing application or job ID');
       }
@@ -411,7 +397,6 @@ export default function ApplicationFlow() {
 
       console.log('Starting interview with context:', interviewContext);
 
-      // Initialize conversation with context
       await conversation.startSession({ 
         agentId: "G52f0rQiQ6VkynMm9PBX",
         overrides: {
@@ -420,17 +405,11 @@ export default function ApplicationFlow() {
             context: JSON.stringify(interviewContext)
           },
           tts: {
-            voiceId: "pNInz6obpgDQGcFmaJgB", // Default interviewer voice
+            voiceId: "pNInz6obpgDQGcFmaJgB",
           },
         }
       });
 
-      toast({
-        title: "Interview started",
-        description: "The AI interviewer will now assess your application",
-      });
-
-      // Update application status
       const { error: updateError } = await supabase
         .from('applications')
         .update({
@@ -441,10 +420,15 @@ export default function ApplicationFlow() {
       if (updateError) {
         console.error('Error updating application status:', updateError);
       }
+
+      toast({
+        title: "Interview started",
+        description: "The AI interviewer will now assess your application",
+      });
+
     } catch (error) {
       console.error('Error starting interview:', error);
       
-      // Check if the error is related to microphone access
       if (error instanceof Error && error.message.includes('Permission denied')) {
         toast({
           title: "Microphone access required",

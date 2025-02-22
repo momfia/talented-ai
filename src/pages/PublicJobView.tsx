@@ -16,7 +16,7 @@ type Job = {
   bad_candidate_attributes: string | null;
 };
 
-export function PublicJobView() {
+export default function PublicJobView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [job, setJob] = useState<Job | null>(null);

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -120,20 +121,36 @@ export default function ApplicationFlow() {
       let currentApplicationId = applicationId;
       
       if (!currentApplicationId) {
-        const { data: application, error: applicationError } = await supabase
+        // First check if there's an existing application
+        const { data: existingApplication } = await supabase
           .from('applications')
-          .insert({
-            job_id: jobId,
-            candidate_id: userId,
-            status: 'in_progress'
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('job_id', jobId)
+          .eq('candidate_id', userId)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
 
-        if (applicationError) throw applicationError;
-        
-        currentApplicationId = application.id;
-        setApplicationId(currentApplicationId);
+        if (existingApplication) {
+          currentApplicationId = existingApplication.id;
+          setApplicationId(existingApplication.id);
+        } else {
+          // Create new application if none exists
+          const { data: newApplication, error: applicationError } = await supabase
+            .from('applications')
+            .insert({
+              job_id: jobId,
+              candidate_id: userId,
+              status: 'in_progress'
+            })
+            .select()
+            .maybeSingle();
+
+          if (applicationError) throw applicationError;
+          if (!newApplication) throw new Error('Failed to create application');
+          
+          currentApplicationId = newApplication.id;
+          setApplicationId(newApplication.id);
+        }
       }
 
       const filePath = `${currentApplicationId}/resume/${file.name}`;
@@ -277,6 +294,17 @@ export default function ApplicationFlow() {
 
     try {
       setIsProcessing(true);
+
+      // Get the current application to ensure it exists
+      const { data: application } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('id', applicationId)
+        .maybeSingle();
+
+      if (!application) {
+        throw new Error('Application not found');
+      }
 
       const timestamp = new Date().getTime();
       const filePath = `${applicationId}/video/introduction_${timestamp}.webm`;

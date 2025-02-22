@@ -9,6 +9,7 @@ import JobDetails from "@/pages/JobDetails";
 import PublicJobView from "@/pages/PublicJobView";
 import ApplicationFlow from "@/pages/ApplicationFlow";
 import { Toaster } from "@/components/ui/toaster";
+import { Dashboard } from "@/components/Dashboard";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create-job" element={<JobForm />} />
         <Route path="/jobs" element={<JobManagement />} />
         <Route path="/jobs/:id" element={<JobDetails />} />

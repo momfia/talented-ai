@@ -401,8 +401,9 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
+      let audioStream;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        audioStream = await navigator.mediaDevices.getUserMedia({ 
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
@@ -411,12 +412,27 @@ export default function ApplicationFlow() {
             channelCount: 1
           }
         });
-        stream.getTracks().forEach(track => track.enabled = true);
+        
+        audioStream.getAudioTracks().forEach(track => {
+          track.enabled = true;
+          console.log('Audio track enabled:', track.label, track.readyState);
+        });
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+          sampleRate: 24000,
+          latencyHint: 'interactive'
+        });
+        const source = audioContext.createMediaStreamSource(audioStream);
+        await audioContext.resume();
+        console.log('Audio context state:', audioContext.state);
+
       } catch (error) {
-        throw new Error('Microphone permission denied');
+        console.error('Media initialization error:', error);
+        throw new Error('Microphone permission denied or audio system error');
       }
 
       if (!applicationId || !jobId) {
+        audioStream?.getTracks().forEach(track => track.stop());
         throw new Error('Missing application or job ID');
       }
 
@@ -462,9 +478,9 @@ export default function ApplicationFlow() {
       };
 
       console.log('Starting interview with context:', interviewContext);
-
-      await navigator.mediaDevices.getUserMedia({ audio: true });
       
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       await conversation.startSession({ 
         agentId: "G52f0rQiQ6VkynMm9PBX",
         overrides: {
@@ -515,7 +531,7 @@ export default function ApplicationFlow() {
     } catch (error) {
       console.error('Error starting interview:', error);
       
-      if (error instanceof Error && error.message.includes('Permission denied')) {
+      if (error instanceof Error && error.message.includes('permission denied')) {
         toast({
           title: "Microphone access required",
           description: "Please allow microphone access to start the interview",

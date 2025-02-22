@@ -121,11 +121,14 @@ export default function ApplicationFlow() {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // Mute the video element to prevent feedback
         videoRef.current.muted = true;
       }
 
-      const mediaRecorder = new MediaRecorder(stream);
+      // Specify the MIME type for WebM with audio codec
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp8,opus'
+      });
+      
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
       setRecordedBlob(null);
@@ -138,13 +141,14 @@ export default function ApplicationFlow() {
       };
 
       mediaRecorder.onstop = () => {
-        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const videoBlob = new Blob(chunksRef.current, { 
+          type: 'video/webm' 
+        });
         setRecordedBlob(videoBlob);
         setShowPreview(true);
         if (videoRef.current) {
           videoRef.current.srcObject = null;
           videoRef.current.src = URL.createObjectURL(videoBlob);
-          // Unmute for preview playback
           videoRef.current.muted = false;
         }
         // Stop all tracks

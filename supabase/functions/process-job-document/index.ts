@@ -1,13 +1,14 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const CHUNK_SIZE = 4000; // characters per chunk, leaving room for system prompt
+const CHUNK_SIZE = 4000;
 
 function chunkText(text: string): string[] {
   const chunks: string[] = [];
@@ -17,7 +18,7 @@ function chunkText(text: string): string[] {
   return chunks;
 }
 
-async function processChunkWithAI(chunk: string): Promise<string> {
+async function processChunkWithAI(chunk: string): Promise<any> {
   const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -29,14 +30,22 @@ async function processChunkWithAI(chunk: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "Extract key information from this job description chunk. Focus on Overview, Responsibilities, Requirements, and Benefits if present. Be concise."
+          content: `You are a professional job description analyzer. Structure the job description into these sections:
+          1. Overview: A brief 2-3 sentence summary of the role
+          2. Key Responsibilities: List of 4-6 main responsibilities
+          3. Required Qualifications: List of must-have qualifications
+          4. Preferred Qualifications (if any): List of nice-to-have qualifications
+          5. Benefits & Perks (if mentioned): List of benefits
+
+          Format each section with clear headings and bullet points where appropriate.
+          Be concise and clear. Remove any redundant or unnecessary information.`
         },
         {
           role: "user",
           content: chunk
         }
       ],
-      temperature: 0.7,
+      temperature: 0.5,
       max_tokens: 1000
     })
   });
@@ -86,10 +95,15 @@ serve(async (req) => {
       chunks.map(chunk => processChunkWithAI(chunk))
     );
 
-    // Combine processed chunks
-    const description = processedChunks.join('\n\n');
+    // Combine and structure the processed chunks
+    const combinedContent = processedChunks.join('\n\n');
 
-    // Log the processing result
+    // Process the combined content one final time to ensure consistency
+    const finalProcessedContent = await processChunkWithAI(combinedContent);
+
+    // Extract the sections we want from the final processed content
+    const description = finalProcessedContent;
+
     console.log('Document processed successfully');
 
     return new Response(

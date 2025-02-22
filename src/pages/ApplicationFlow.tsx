@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Upload, Video, PhoneCall, User } from "lucide-react";
+import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
 
@@ -22,6 +22,8 @@ export default function ApplicationFlow() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const conversation = useConversation();
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -115,6 +117,8 @@ export default function ApplicationFlow() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+      setRecordedBlob(null);
+      setShowPreview(false);
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -122,9 +126,16 @@ export default function ApplicationFlow() {
         }
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-        await uploadVideo(videoBlob);
+        setRecordedBlob(videoBlob);
+        setShowPreview(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+          videoRef.current.src = URL.createObjectURL(videoBlob);
+        }
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -132,7 +143,9 @@ export default function ApplicationFlow() {
 
       // Stop recording after 1 minute
       setTimeout(() => {
-        stopRecording();
+        if (mediaRecorder.state === 'recording') {
+          stopRecording();
+        }
       }, 60000);
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -151,17 +164,20 @@ export default function ApplicationFlow() {
     }
   };
 
-  const uploadVideo = async (videoBlob: Blob) => {
-    if (!applicationId) return;
+  const uploadVideo = async () => {
+    if (!applicationId || !recordedBlob) return;
 
     try {
       setIsProcessing(true);
 
-      // Upload video
-      const filePath = `${applicationId}/video/introduction.webm`;
+      // Upload video with a unique name to prevent conflicts
+      const timestamp = new Date().getTime();
+      const filePath = `${applicationId}/video/introduction_${timestamp}.webm`;
       const { error: uploadError } = await supabase.storage
         .from('applications')
-        .upload(filePath, videoBlob);
+        .upload(filePath, recordedBlob, {
+          upsert: true // Allow overwriting if file exists
+        });
 
       if (uploadError) throw uploadError;
 
@@ -202,6 +218,14 @@ export default function ApplicationFlow() {
       });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const resetRecording = () => {
+    setRecordedBlob(null);
+    setShowPreview(false);
+    if (videoRef.current) {
+      videoRef.current.src = '';
     }
   };
 
@@ -313,32 +337,56 @@ export default function ApplicationFlow() {
                     <video
                       ref={videoRef}
                       autoPlay
-                      muted
                       playsInline
+                      controls={showPreview}
                       className="w-full aspect-video bg-black rounded-lg"
                     />
-                    <div className="flex justify-center">
-                      <Button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : isRecording ? (
-                          <>
-                            <Video className="mr-2 h-4 w-4" />
-                            Stop Recording
-                          </>
-                        ) : (
-                          <>
-                            <Video className="mr-2 h-4 w-4" />
-                            Start Recording (1 min)
-                          </>
-                        )}
-                      </Button>
+                    <div className="flex justify-center gap-4">
+                      {!showPreview ? (
+                        <Button
+                          onClick={isRecording ? stopRecording : startRecording}
+                          disabled={isProcessing}
+                        >
+                          {isRecording ? (
+                            <>
+                              <Video className="mr-2 h-4 w-4" />
+                              Stop Recording
+                            </>
+                          ) : (
+                            <>
+                              <Video className="mr-2 h-4 w-4" />
+                              Start Recording (1 min)
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={resetRecording}
+                            disabled={isProcessing}
+                          >
+                            <RefreshCcw className="mr-2 h-4 w-4" />
+                            Record Again
+                          </Button>
+                          <Button
+                            onClick={uploadVideo}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Submit Recording
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

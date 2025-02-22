@@ -167,8 +167,14 @@ export default function JobForm() {
       }
 
       const jobData = {
-        ...data,
-        recruiter_id: session.user.id,
+        title: data.title,
+        description: data.description,
+        good_candidate_attributes: data.good_candidate_attributes,
+        bad_candidate_attributes: data.bad_candidate_attributes,
+        status: data.status,
+        essential_attributes: data.essential_attributes,
+        llm_suggested_attributes: data.llm_suggested_attributes,
+        recruiter_id: session.user.id
       };
 
       const { error } = id
@@ -178,7 +184,7 @@ export default function JobForm() {
             .eq('id', id)
         : await supabase
             .from('jobs')
-            .insert([jobData]);
+            .insert(jobData);
 
       if (error) throw error;
 

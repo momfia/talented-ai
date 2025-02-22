@@ -63,6 +63,44 @@ export type Database = {
           },
         ]
       }
+      job_documents: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_path: string
+          filename: string
+          id: string
+          job_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_path: string
+          filename: string
+          id?: string
+          job_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_path?: string
+          filename?: string
+          id?: string
+          job_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_documents_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           bad_candidate_attributes: string | null

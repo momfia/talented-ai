@@ -1,6 +1,7 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+// No need for xhr import since we're in Deno environment
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
     const fileResponse = await fetch(publicUrl);
     const fileBlob = await fileResponse.blob();
     
-    // Process with OpenAI (including file content)
+    // Process with OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -58,11 +59,11 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: 'Extract the job description details from this document. Provide a structured response with: title, description, and key required attributes.'
+            content: 'Extract the job description details from this document. Provide a structured response with: title, description, and key required attributes. Return the response as a JSON object.'
           },
           {
             role: 'user',
@@ -73,13 +74,12 @@ Deno.serve(async (req) => {
     });
 
     const aiResponse = await response.json();
-    const extractedContent = aiResponse.choices[0].message.content;
-
+    
     return new Response(
       JSON.stringify({
         success: true,
         filePath,
-        extractedContent,
+        extractedContent: aiResponse.choices[0].message.content,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

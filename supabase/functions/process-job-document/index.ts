@@ -7,6 +7,49 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const CHUNK_SIZE = 4000; // characters per chunk, leaving room for system prompt
+
+function chunkText(text: string): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+    chunks.push(text.slice(i, i + CHUNK_SIZE));
+  }
+  return chunks;
+}
+
+async function processChunkWithAI(chunk: string): Promise<string> {
+  const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Extract key information from this job description chunk. Focus on Overview, Responsibilities, Requirements, and Benefits if present. Be concise."
+        },
+        {
+          role: "user",
+          content: chunk
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    })
+  });
+
+  if (!openAiResponse.ok) {
+    const error = await openAiResponse.text();
+    throw new Error(`OpenAI API error: ${error}`);
+  }
+
+  const openAiData = await openAiResponse.json();
+  return openAiData.choices[0].message.content;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -33,41 +76,21 @@ serve(async (req) => {
 
     // Convert the file to text
     const text = await fileData.text()
+    
+    // Split text into manageable chunks
+    const chunks = chunkText(text);
+    console.log(`Processing document in ${chunks.length} chunks`);
 
-    // Process with OpenAI
-    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional job description analyzer. Extract and format the key information from the provided job description document into a clear, well-structured format. Include sections for: Overview, Responsibilities, Requirements, and any additional benefits or important information. Make it concise but comprehensive."
-          },
-          {
-            role: "user",
-            content: text
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500
-      })
-    })
+    // Process each chunk
+    const processedChunks = await Promise.all(
+      chunks.map(chunk => processChunkWithAI(chunk))
+    );
 
-    if (!openAiResponse.ok) {
-      const error = await openAiResponse.text()
-      throw new Error(`OpenAI API error: ${error}`)
-    }
-
-    const openAiData = await openAiResponse.json()
-    const description = openAiData.choices[0].message.content
+    // Combine processed chunks
+    const description = processedChunks.join('\n\n');
 
     // Log the processing result
-    console.log('Document processed successfully')
+    console.log('Document processed successfully');
 
     return new Response(
       JSON.stringify({ description }),

@@ -258,7 +258,7 @@ export default function ApplicationFlow() {
                 <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6">
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.html,.htm"
                     onChange={handleFileUpload}
                     className="hidden"
                     id="resume-upload"

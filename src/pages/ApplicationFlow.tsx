@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export default function ApplicationFlow() {
       if (!jobId) return;
 
       try {
+        console.log('Loading application for job:', jobId, 'candidate:', candidateId);
+        
         const { data: application, error } = await supabase
           .from('applications')
           .select('*')
@@ -58,19 +61,36 @@ export default function ApplicationFlow() {
           if (error.code !== 'PGRST116') { // Not found error
             throw error;
           }
-          // If no application found, stay at resume step
+          console.log('No existing application found');
           setIsLoading(false);
           return;
         }
 
         if (application) {
+          console.log('Found application:', application);
           setApplicationId(application.id);
           
-          // Determine the current step based on application status
-          if (application.status === 'video_uploaded') {
+          // Update step based on application status
+          if (application.status === 'video_processed' || application.status === 'video_uploaded') {
+            console.log('Setting step to interview');
             setCurrentStep('interview');
           } else if (application.status === 'resume_uploaded') {
+            console.log('Setting step to video');
             setCurrentStep('video');
+          }
+          
+          // Load video preview if it exists
+          if (application.video_path) {
+            setShowPreview(true);
+            if (videoRef.current) {
+              const { data } = await supabase.storage
+                .from('applications')
+                .createSignedUrl(application.video_path, 3600);
+                
+              if (data?.signedUrl) {
+                videoRef.current.src = data.signedUrl;
+              }
+            }
           }
         }
       } catch (error) {
@@ -102,21 +122,26 @@ export default function ApplicationFlow() {
     try {
       setIsUploading(true);
       
-      const { data: application, error: applicationError } = await supabase
-        .from('applications')
-        .insert({
-          job_id: jobId,
-          candidate_id: userId,
-          status: 'in_progress'
-        })
-        .select()
-        .single();
-
-      if (applicationError) throw applicationError;
+      let currentApplicationId = applicationId;
       
-      setApplicationId(application.id);
+      if (!currentApplicationId) {
+        const { data: application, error: applicationError } = await supabase
+          .from('applications')
+          .insert({
+            job_id: jobId,
+            candidate_id: userId,
+            status: 'in_progress'
+          })
+          .select()
+          .single();
 
-      const filePath = `${application.id}/resume/${file.name}`;
+        if (applicationError) throw applicationError;
+        
+        currentApplicationId = application.id;
+        setApplicationId(currentApplicationId);
+      }
+
+      const filePath = `${currentApplicationId}/resume/${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('applications')
         .upload(filePath, file);
@@ -127,11 +152,9 @@ export default function ApplicationFlow() {
         .from('applications')
         .update({
           status: 'resume_uploaded',
-          key_attributes: {
-            resume_path: filePath
-          }
+          resume_path: filePath
         })
-        .eq('id', application.id);
+        .eq('id', currentApplicationId);
 
       if (updateError) throw updateError;
 
@@ -270,21 +293,11 @@ export default function ApplicationFlow() {
 
       if (uploadError) throw uploadError;
 
-      const { data: aiAnalysis, error: aiError } = await supabase.functions
-        .invoke('analyze-video', {
-          body: { applicationId, videoPath: filePath }
-        });
-
-      if (aiError) throw aiError;
-
       const { error: updateError } = await supabase
         .from('applications')
         .update({
           status: 'video_uploaded',
-          key_attributes: {
-            ...aiAnalysis,
-            video_path: filePath
-          }
+          video_path: filePath
         })
         .eq('id', applicationId);
 
@@ -373,7 +386,7 @@ export default function ApplicationFlow() {
               <CardTitle>Job Application Process</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className={`space-y-4 ${currentStep !== 'resume' && 'opacity-50'}`}>
+              <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
                   Upload Your Resume
@@ -412,7 +425,7 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              <div className={`space-y-4 ${currentStep !== 'video' && 'opacity-50'}`}>
+              <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
                   Record Video Introduction
@@ -477,7 +490,7 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              <div className={`space-y-4 ${currentStep !== 'interview' && 'opacity-50'}`}>
+              <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
                   AI Interview

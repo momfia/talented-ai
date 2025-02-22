@@ -14,28 +14,55 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<'recruiter' | 'candidate'>('candidate');
 
   useEffect(() => {
+    // Check for error parameters in URL
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+
+    if (error) {
+      console.error('Auth Error:', { error, description: errorDescription });
+      toast({
+        title: "Authentication Error",
+        description: errorDescription || "Failed to authenticate",
+        variant: "destructive"
+      });
+    }
+
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session Error:', sessionError);
+      }
       if (session) {
         navigate("/");
       }
     };
     checkUser();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleGoogleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log('Starting Google login...');
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
           queryParams: {
-            role: selectedRole
+            role: selectedRole,
+            access_type: 'offline',
+            prompt: 'consent'
           }
         }
       });
-      if (error) throw error;
+      
+      console.log('OAuth response:', { data, error });
+      
+      if (error) {
+        console.error('OAuth Error:', error);
+        throw error;
+      }
     } catch (error: any) {
+      console.error('Login Error:', error);
       toast({
         title: "Error",
         description: error.message,

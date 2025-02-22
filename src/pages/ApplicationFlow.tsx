@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw } from "lucide-react";
+import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw, Mic, MicOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
 
@@ -26,6 +26,8 @@ export default function ApplicationFlow() {
   const conversation = useConversation();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInterviewActive, setIsInterviewActive] = useState(false);
+  const { isSpeaking, status } = useConversation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -66,7 +68,6 @@ export default function ApplicationFlow() {
           console.log('Found application:', application);
           setApplicationId(application.id);
           
-          // Update step based on application status
           if (application.status === 'video_processed' || application.status === 'video_uploaded') {
             console.log('Setting step to interview');
             setCurrentStep('interview');
@@ -75,7 +76,6 @@ export default function ApplicationFlow() {
             setCurrentStep('video');
           }
           
-          // Load video preview if it exists
           if (application.video_path && videoRef.current) {
             setShowPreview(true);
             const { data } = await supabase.storage
@@ -109,6 +109,14 @@ export default function ApplicationFlow() {
     init();
   }, [jobId, navigate, toast]);
 
+  useEffect(() => {
+    if (status === 'connected') {
+      setIsInterviewActive(true);
+    } else if (status === 'disconnected') {
+      setIsInterviewActive(false);
+    }
+  }, [status]);
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !userId || !jobId) return;
@@ -116,7 +124,6 @@ export default function ApplicationFlow() {
     try {
       setIsUploading(true);
       
-      // Create new application if none exists
       let currentApplicationId = applicationId;
       
       if (!currentApplicationId) {
@@ -137,7 +144,6 @@ export default function ApplicationFlow() {
         setApplicationId(newApplication.id);
       }
 
-      // Generate unique file path
       const timestamp = new Date().getTime();
       const sanitizedFileName = file.name.replace(/[^\x00-\x7F]/g, '');
       const fileExt = sanitizedFileName.split('.').pop();
@@ -146,7 +152,7 @@ export default function ApplicationFlow() {
       const { error: uploadError } = await supabase.storage
         .from('applications')
         .upload(filePath, file, {
-          upsert: true // Allow overwriting
+          upsert: true
         });
 
       if (uploadError) throw uploadError;
@@ -194,7 +200,7 @@ export default function ApplicationFlow() {
       }
     }
     console.error('No supported MIME type found');
-    return 'video/webm'; // Fallback
+    return 'video/webm';
   };
 
   const startRecording = async () => {
@@ -223,8 +229,8 @@ export default function ApplicationFlow() {
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 2500000, // 2.5 Mbps
-        audioBitsPerSecond: 128000    // 128 kbps
+        videoBitsPerSecond: 2500000,
+        audioBitsPerSecond: 128000
       });
       
       mediaRecorderRef.current = mediaRecorder;
@@ -251,11 +257,10 @@ export default function ApplicationFlow() {
           videoRef.current.src = URL.createObjectURL(videoBlob);
           videoRef.current.muted = false;
         }
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start(1000); // Get data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
 
       setTimeout(() => {
@@ -286,7 +291,6 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
-      // Get the current application to ensure it exists
       const { data: applications, error: fetchError } = await supabase
         .from('applications')
         .select('*')
@@ -347,11 +351,16 @@ export default function ApplicationFlow() {
     try {
       setIsProcessing(true);
 
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (error) {
+        throw new Error('Microphone permission denied');
+      }
+
       if (!applicationId || !jobId) {
         throw new Error('Missing application or job ID');
       }
 
-      // Get job details
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
         .select(`
@@ -366,7 +375,6 @@ export default function ApplicationFlow() {
 
       if (jobError) throw jobError;
 
-      // Get application details including AI analysis
       const { data: applicationData, error: applicationError } = await supabase
         .from('applications')
         .select(`
@@ -380,7 +388,6 @@ export default function ApplicationFlow() {
 
       if (applicationError) throw applicationError;
 
-      // Prepare context for the interview agent
       const interviewContext = {
         job: {
           title: jobData.title,
@@ -406,6 +413,13 @@ export default function ApplicationFlow() {
           },
           tts: {
             voiceId: "pNInz6obpgDQGcFmaJgB",
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              similarity_boost: 0.75,
+              stability: 0.5,
+              style: 0.0,
+              use_speaker_boost: true
+            }
           },
         }
       });
@@ -586,24 +600,51 @@ export default function ApplicationFlow() {
                 </h3>
                 {currentStep === 'interview' && (
                   <div className="flex flex-col items-center gap-4">
-                    <Button
-                      onClick={startInterview}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <PhoneCall className="mr-2 h-4 w-4" />
-                          Start Interview
-                        </>
-                      )}
-                    </Button>
+                    {!isInterviewActive ? (
+                      <Button
+                        onClick={startInterview}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <PhoneCall className="mr-2 h-4 w-4" />
+                            Start Interview
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-4 w-full">
+                        <div className="flex items-center justify-center gap-4">
+                          <div className={`p-4 rounded-full ${isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
+                            {isSpeaking ? (
+                              <Mic className="h-6 w-6 text-green-600" />
+                            ) : (
+                              <MicOff className="h-6 w-6 text-gray-600" />
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
+                          </div>
+                        </div>
+                        
+                        <div className="text-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => conversation.endSession()}
+                            className="mt-4"
+                          >
+                            End Interview
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                      You'll have a 5-minute conversation with our AI interviewer
+                      You'll have a conversation with our AI interviewer
                     </p>
                   </div>
                 )}

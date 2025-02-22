@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from 'react-router-dom';
 
 type Job = {
   id: string;
@@ -21,6 +22,7 @@ export default function PublicJobView() {
   const { toast } = useToast();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchJobDetails();
@@ -103,7 +105,7 @@ export default function PublicJobView() {
             <div className="flex justify-center mt-6">
               <Button
                 size="lg"
-                onClick={() => window.location.href = `mailto:apply@company.com?subject=Application for ${job.title} (${job.id})`}
+                onClick={() => navigate(`/apply/${job.id}`)}
               >
                 Apply for this Position
               </Button>

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -143,10 +142,9 @@ export default function ApplicationFlow() {
               status: 'in_progress'
             })
             .select()
-            .maybeSingle();
+            .single();
 
           if (applicationError) throw applicationError;
-          if (!newApplication) throw new Error('Failed to create application');
           
           currentApplicationId = newApplication.id;
           setApplicationId(newApplication.id);
@@ -296,13 +294,13 @@ export default function ApplicationFlow() {
       setIsProcessing(true);
 
       // Get the current application to ensure it exists
-      const { data: application } = await supabase
+      const { data: application, error: fetchError } = await supabase
         .from('applications')
         .select('*')
         .eq('id', applicationId)
-        .maybeSingle();
+        .single();
 
-      if (!application) {
+      if (fetchError || !application) {
         throw new Error('Application not found');
       }
 

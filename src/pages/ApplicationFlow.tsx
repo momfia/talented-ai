@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ export default function ApplicationFlow() {
   const { jobId } = useParams<{ jobId: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<ApplicationStep>('interview');
+  const [currentStep, setCurrentStep] = useState<ApplicationStep>('resume');
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -750,3 +751,4 @@ export default function ApplicationFlow() {
     </div>
   );
 }
+

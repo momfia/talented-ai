@@ -358,36 +358,55 @@ export default function ApplicationFlow() {
   const startInterview = async () => {
     try {
       setIsProcessing(true);
-      
-      const { data, error } = await supabase.functions
-        .invoke('get-interview-agent-url', {
-          body: { applicationId }
-        });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
-
-      if (!data?.url) {
-        console.error('No URL returned:', data);
-        throw new Error('Failed to get interview URL');
-      }
-
-      console.log('Starting interview with URL:', data.url);
-      await conversation.startSession({ url: data.url });
+      // Initialize conversation with direct agent ID
+      await conversation.startSession({ 
+        agentId: "G52f0rQiQ6VkynMm9PBX",
+        overrides: {
+          agent: {
+            language: "en",
+          },
+          tts: {
+            voiceId: "pNInz6obpgDQGcFmaJgB", // Default interviewer voice
+          },
+        }
+      });
 
       toast({
         title: "Interview started",
         description: "The AI interviewer will now assess your application",
       });
+
+      // Update application status
+      if (applicationId) {
+        const { error: updateError } = await supabase
+          .from('applications')
+          .update({
+            status: 'interview_started',
+          })
+          .eq('id', applicationId);
+
+        if (updateError) {
+          console.error('Error updating application status:', updateError);
+        }
+      }
     } catch (error) {
       console.error('Error starting interview:', error);
-      toast({
-        title: "Error starting interview",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
-      });
+      
+      // Check if the error is related to microphone access
+      if (error instanceof Error && error.message.includes('Permission denied')) {
+        toast({
+          title: "Microphone access required",
+          description: "Please allow microphone access to start the interview",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error starting interview",
+          description: error instanceof Error ? error.message : "Please try again",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsProcessing(false);
     }

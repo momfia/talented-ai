@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,17 +10,33 @@ const corsHeaders = {
 
 function truncateText(text: string, maxLength = 4000): string {
   if (text.length <= maxLength) return text;
-  
-  // Find the last period before maxLength to maintain coherent text
   const lastPeriod = text.lastIndexOf('.', maxLength);
   return text.substring(0, lastPeriod + 1);
 }
 
 async function processWithAI(text: string): Promise<any> {
   try {
-    // Truncate text to avoid token limit issues
     const truncatedText = truncateText(text);
     
+    const systemPrompt = `You are a job description analyzer. Your task is to extract and format key information from the provided job description. You must return a valid JSON object with the following structure exactly:
+{
+  "description": "string with formatted sections",
+  "essential_attributes": ["array", "of", "strings"],
+  "good_candidate_attributes": "string",
+  "bad_candidate_attributes": "string"
+}
+
+Analyze the text and include:
+1. A well-formatted job description with:
+   - Brief overview
+   - Key responsibilities
+   - Requirements
+2. 5-8 essential attributes as an array
+3. Brief good candidate attributes description
+4. Brief bad candidate attributes description
+
+BE CONCISE and ensure your response is VALID JSON.`;
+
     const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -31,61 +48,63 @@ async function processWithAI(text: string): Promise<any> {
         messages: [
           {
             role: "system",
-            content: `Analyze this job description and extract the following information in a structured format:
-
-            1. Create a well-formatted job description with:
-               - Overview (2-3 sentences)
-               - Key Responsibilities (4-6 bullet points)
-               - Technical Requirements
-               - Additional Requirements
-
-            2. Extract a list of 5-8 essential attributes that a candidate must have
-
-            3. Create a brief description of what makes a good candidate for this role
-               Focus on soft skills, personality traits, and working style
-
-            4. Create a brief description of what would make a bad candidate for this role
-               Focus on characteristics that would make someone unsuitable
-
-            Return the results as a JSON object with these keys:
-            - description (formatted text with sections)
-            - essential_attributes (array of strings)
-            - good_candidate_attributes (string)
-            - bad_candidate_attributes (string)
-
-            Note: Keep your response concise and within token limits.
-            `
+            content: systemPrompt
           },
           {
             role: "user",
             content: truncatedText
           }
         ],
-        temperature: 0.5,
-        max_tokens: 1000
+        temperature: 0.3,
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
       })
     });
 
     if (!openAiResponse.ok) {
-      const error = await openAiResponse.text();
-      throw new Error(`OpenAI API error: ${error}`);
+      const errorText = await openAiResponse.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
     const openAiData = await openAiResponse.json();
+    
+    if (!openAiData.choices?.[0]?.message?.content) {
+      console.error('Unexpected OpenAI response structure:', openAiData);
+      throw new Error('Invalid response from OpenAI API');
+    }
+
     const content = openAiData.choices[0].message.content;
     
     try {
+      // Attempt to parse the response and validate its structure
       const parsedContent = JSON.parse(content);
+      
+      // Validate the required fields and types
+      if (typeof parsedContent.description !== 'string') {
+        throw new Error('Missing or invalid description field');
+      }
+      if (!Array.isArray(parsedContent.essential_attributes)) {
+        throw new Error('Missing or invalid essential_attributes field');
+      }
+      if (typeof parsedContent.good_candidate_attributes !== 'string') {
+        throw new Error('Missing or invalid good_candidate_attributes field');
+      }
+      if (typeof parsedContent.bad_candidate_attributes !== 'string') {
+        throw new Error('Missing or invalid bad_candidate_attributes field');
+      }
+
+      // Return the validated data
       return {
-        description: parsedContent.description || "",
-        essential_attributes: Array.isArray(parsedContent.essential_attributes) ? parsedContent.essential_attributes : [],
-        good_candidate_attributes: parsedContent.good_candidate_attributes || "",
-        bad_candidate_attributes: parsedContent.bad_candidate_attributes || "",
+        description: parsedContent.description,
+        essential_attributes: parsedContent.essential_attributes,
+        good_candidate_attributes: parsedContent.good_candidate_attributes,
+        bad_candidate_attributes: parsedContent.bad_candidate_attributes,
       };
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
-      console.log('Raw AI response:', content);
-      throw new Error('Failed to parse AI response. Please try again.');
+      console.error('Raw AI response:', content);
+      throw new Error(`Failed to parse AI response: ${parseError.message}`);
     }
   } catch (error) {
     console.error('Error in processWithAI:', error);
@@ -117,7 +136,6 @@ serve(async (req) => {
 
     const text = await fileData.text();
     
-    // Process the text with AI
     const processedData = await processWithAI(text);
 
     return new Response(

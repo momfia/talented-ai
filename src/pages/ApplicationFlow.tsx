@@ -14,7 +14,7 @@ export default function ApplicationFlow() {
   const { jobId } = useParams<{ jobId: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<ApplicationStep>('resume');
+  const [currentStep, setCurrentStep] = useState<ApplicationStep>('interview');
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -486,7 +486,7 @@ export default function ApplicationFlow() {
         overrides: {
           agent: {
             language: "en",
-            context: JSON.stringify(interviewContext),
+            // context: JSON.stringify(interviewContext),
             debug: true,
             firstMessage: "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?"
           },

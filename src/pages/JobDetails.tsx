@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Settings2, Pencil, Upload, Trash2, Share2 } from "lucide-react";
@@ -252,7 +251,7 @@ export default function JobDetails() {
               <div className="flex items-center gap-2">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.txt"
+                  accept=".pdf,.doc,.docx,.html,.htm"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
@@ -272,6 +271,9 @@ export default function JobDetails() {
                     </>
                   )}
                 </Button>
+                <span className="text-sm text-muted-foreground">
+                  Supported: PDF, DOC, DOCX, HTML
+                </span>
               </div>
             )}
             {job.status === 'published' && (
@@ -342,7 +344,7 @@ export default function JobDetails() {
                 <div className="flex items-center gap-4">
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,.txt"
+                    accept=".pdf,.doc,.docx,.html,.htm"
                     onChange={handleFileUpload}
                     className="hidden"
                     id="file-upload"

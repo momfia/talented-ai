@@ -22,7 +22,7 @@ serve(async (req) => {
 
     // Get the signed URL from ElevenLabs with the agent ID
     const response = await fetch(
-      "https://api.elevenlabs.io/v1/conversation/get_signed_url?agent_id=your_agent_id_here", // Replace with your agent ID
+      "https://api.elevenlabs.io/v1/conversation/get_signed_url?agent_id=G52f0rQiQ6VkynMm9PBX",
       {
         method: "GET",
         headers: {

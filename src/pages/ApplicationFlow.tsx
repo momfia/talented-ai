@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -23,10 +23,30 @@ export default function ApplicationFlow() {
   const chunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const conversation = useConversation();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to apply for this position",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+      setUserId(session.user.id);
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !userId || !jobId) return;
 
     try {
       setIsUploading(true);
@@ -36,6 +56,7 @@ export default function ApplicationFlow() {
         .from('applications')
         .insert({
           job_id: jobId,
+          candidate_id: userId,
           status: 'in_progress'
         })
         .select()
@@ -53,10 +74,15 @@ export default function ApplicationFlow() {
 
       if (uploadError) throw uploadError;
 
-      // Update application with resume path
+      // Update application
       const { error: updateError } = await supabase
         .from('applications')
-        .update({ resume_path: filePath })
+        .update({
+          status: 'resume_uploaded',
+          key_attributes: {
+            resume_path: filePath
+          }
+        })
         .eq('id', application.id);
 
       if (updateError) throw updateError;
@@ -147,12 +173,15 @@ export default function ApplicationFlow() {
 
       if (aiError) throw aiError;
 
-      // Update application with video path and AI analysis
+      // Update application
       const { error: updateError } = await supabase
         .from('applications')
         .update({
-          video_path: filePath,
-          ai_analysis: aiAnalysis
+          status: 'video_uploaded',
+          key_attributes: {
+            ...aiAnalysis,
+            video_path: filePath
+          }
         })
         .eq('id', applicationId);
 
@@ -206,6 +235,10 @@ export default function ApplicationFlow() {
       setIsProcessing(false);
     }
   };
+
+  if (!userId) {
+    return null; // Don't render anything while checking authentication
+  }
 
   return (
     <div className="container mx-auto p-6">

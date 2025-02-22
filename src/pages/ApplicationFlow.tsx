@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -55,15 +54,11 @@ export default function ApplicationFlow() {
           .select('*')
           .eq('job_id', jobId)
           .eq('candidate_id', candidateId)
-          .single();
+          .order('created_at', { ascending: false })
+          .maybeSingle();
 
         if (error) {
-          if (error.code !== 'PGRST116') { // Not found error
-            throw error;
-          }
-          console.log('No existing application found');
-          setIsLoading(false);
-          return;
+          throw error;
         }
 
         if (application) {

@@ -4,6 +4,7 @@ import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import { JobForm } from "@/components/JobForm";
+import JobManagement from "@/pages/JobManagement";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/create-job" element={<JobForm />} />
+        <Route path="/jobs" element={<JobManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />

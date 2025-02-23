@@ -27,10 +27,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Create a FormData object
-    const formData = new FormData();
-
     // Download the video from storage
+    console.log('Downloading video from storage...');
     const { data: videoData, error: downloadError } = await supabaseClient
       .storage
       .from('applications')
@@ -41,14 +39,20 @@ serve(async (req) => {
       throw new Error(`Failed to download video: ${downloadError.message}`);
     }
 
-    // Create a blob from the video data
-    const blob = new Blob([videoData], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
+    if (!videoData) {
+      throw new Error('No video data received from storage');
+    }
+
+    // Create a FormData object and append the video file
+    console.log('Preparing video data for transcription...');
+    const formData = new FormData();
+    const videoBlob = new Blob([videoData], { type: 'video/webm' });
+    formData.append('file', videoBlob, 'video.webm');
     formData.append('model', 'whisper-1');
 
     console.log('Sending to OpenAI for transcription...');
 
-    // Send directly to OpenAI API
+    // Send to OpenAI Whisper API
     const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
@@ -58,13 +62,18 @@ serve(async (req) => {
     });
 
     if (!transcriptionResponse.ok) {
-      const error = await transcriptionResponse.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${error}`);
+      const errorText = await transcriptionResponse.text();
+      console.error('OpenAI Whisper API error:', errorText);
+      throw new Error(`OpenAI Whisper API error: ${errorText}`);
     }
 
     const { text: transcript } = await transcriptionResponse.json();
-    console.log('Transcription received:', transcript?.substring(0, 100) + '...');
+    
+    if (!transcript) {
+      throw new Error('No transcript received from OpenAI');
+    }
+    
+    console.log('Transcription received:', transcript.substring(0, 100) + '...');
 
     // Initialize OpenAI client for chat completion
     const openai = new OpenAI({ 

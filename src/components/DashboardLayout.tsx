@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
@@ -10,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AppHeader } from "@/components/shared/AppHeader";
 
 interface UserProfile {
   id: string;
@@ -103,14 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-background/80">
         <Sidebar className="border-r border-border/50">
-          <SidebarHeader className="border-b border-border/50 px-6 py-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <User className="h-6 w-6 text-primary" />
-              </div>
-              <span className="font-semibold text-lg gradient-text">Talented AI</span>
-            </div>
-          </SidebarHeader>
+          <AppHeader showBackButton={false} />
           <SidebarContent>
             <div className="px-4 py-4">
               <div className="space-y-4">

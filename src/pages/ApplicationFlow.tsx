@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ResumeUpload } from "@/components/application/ResumeUpload";
 import { VideoRecorder } from "@/components/application/VideoRecorder";
 import { AIInterview } from "@/components/application/AIInterview";
 import { ApplicationStep } from "@/types/application";
+import { AppHeader } from "@/components/shared/AppHeader";
 
 export default function ApplicationFlow() {
   const { id: jobId } = useParams<{ id: string }>();
@@ -105,17 +106,7 @@ export default function ApplicationFlow() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary p-2 rounded-lg">
-              <User className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl">Talented AI</span>
-          </div>
-        </div>
-      </header>
-
+      <AppHeader />
       <div className="container mx-auto p-6">
         <div className="max-w-2xl mx-auto">
           <Card>

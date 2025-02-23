@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
   onProcessed: (data: {
@@ -25,23 +26,33 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/process-job-document', {
-        method: 'POST',
-        body: formData,
+      // First, upload the file to Supabase storage
+      const timestamp = new Date().getTime();
+      const sanitizedFileName = file.name.replace(/[^\x00-\x7F]/g, '');
+      const filePath = `job-documents/${timestamp}_${sanitizedFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('job-documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Then process it using the edge function
+      const { data, error } = await supabase.functions.invoke('process-job-document', {
+        body: { filePath }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to process document');
-      }
+      if (error) throw error;
 
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data?.extractedContent) {
+        throw new Error('No content extracted from document');
       }
 
       // Parse the AI response and update the form
-      const extractedContent = JSON.parse(data.extractedContent);
+      const extractedContent = typeof data.extractedContent === 'string' 
+        ? JSON.parse(data.extractedContent) 
+        : data.extractedContent;
+
       onProcessed({
         title: extractedContent.title,
         description: extractedContent.description,

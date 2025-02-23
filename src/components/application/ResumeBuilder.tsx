@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +36,7 @@ export function ResumeBuilder({ onResumeGenerated }: ResumeBuilderProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const generateResume = async () => {
+  async function generateResume() {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-resume', {
@@ -70,7 +69,7 @@ export function ResumeBuilder({ onResumeGenerated }: ResumeBuilderProps) {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }
 
   const nextStep = () => {
     switch (currentStep) {

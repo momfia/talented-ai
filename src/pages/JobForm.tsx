@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from "react-hook-form";
@@ -101,7 +100,6 @@ export default function JobForm() {
 
       if (error) throw error;
       if (data) {
-        // Ensure essential_attributes and llm_suggested_attributes are arrays
         const formattedData = {
           ...data,
           essential_attributes: Array.isArray(data.essential_attributes) ? data.essential_attributes : [],
@@ -125,25 +123,17 @@ export default function JobForm() {
   async function analyzeCandidateAttributes(data: JobFormValues) {
     try {
       setAnalyzing(true);
-      const response = await fetch('/api/analyze-job', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('analyze-job', {
+        body: {
           title: data.title,
           description: data.description,
           goodAttributes: data.good_candidate_attributes,
           badAttributes: data.bad_candidate_attributes,
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (error) throw new Error(error.message);
+      if (!result?.suggestedAttributes) throw new Error('No attributes generated');
 
       const newAttributes = result.suggestedAttributes;
       form.setValue('llm_suggested_attributes', newAttributes);

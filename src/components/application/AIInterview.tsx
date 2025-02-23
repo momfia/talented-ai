@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
@@ -71,14 +72,16 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     }
 
     const fullTranscript = transcriptRef.current.join('\n');
-    console.log('Full transcript:', fullTranscript); // Debug log
+    const conversationTranscript = lastThreeLines.join('\n');
+    console.log('Full transcript:', fullTranscript);
 
     try {
       console.log('Updating application with transcript...');
       const { error: transcriptError } = await supabase
         .from('applications')
         .update({
-          conversation_transcript: fullTranscript,
+          conversation_transcript: conversationTranscript,
+          interview_transcript: fullTranscript,
           status: 'interview_completed'
         })
         .eq('id', applicationId);

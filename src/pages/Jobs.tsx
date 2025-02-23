@@ -89,7 +89,7 @@ export default function Jobs() {
             <Card 
               key={job.id} 
               className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => navigate(`/jobs/${job.id}`)}
+              onClick={() => navigate(`/public/jobs/${job.id}`)}
             >
               <CardHeader>
                 <CardTitle className="line-clamp-2">{job.title}</CardTitle>

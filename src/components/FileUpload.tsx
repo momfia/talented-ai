@@ -48,22 +48,12 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
         throw new Error('No content extracted from document');
       }
 
-      // Process the document through AI analysis
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-job', {
-        body: {
-          title: data.title,
-          description: data.description,
-        }
-      });
-
-      if (analysisError) throw analysisError;
-
       onProcessed({
         title: data.title,
         description: data.description,
         good_candidate_attributes: data.good_candidate_attributes,
         bad_candidate_attributes: data.bad_candidate_attributes,
-        essential_attributes: analysisData?.suggestedAttributes || []
+        essential_attributes: data.essential_attributes || []
       });
 
       toast({

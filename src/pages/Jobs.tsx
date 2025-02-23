@@ -16,6 +16,7 @@ interface Job {
   company_name?: string;
   location?: string;
   status: 'draft' | 'published' | 'archived';
+  recruiter_id: string;
 }
 
 export default function Jobs() {
@@ -38,7 +39,20 @@ export default function Jobs() {
 
       if (error) throw error;
 
-      setJobs(jobsData || []);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', jobsData?.map(job => job.recruiter_id) || []);
+
+      if (profilesError) throw profilesError;
+
+      // Combine jobs with company names from profiles
+      const jobsWithCompanyNames = jobsData?.map(job => ({
+        ...job,
+        company_name: profiles?.find(profile => profile.id === job.recruiter_id)?.full_name || 'Unknown Company'
+      })) || [];
+
+      setJobs(jobsWithCompanyNames);
     } catch (error: any) {
       toast({
         title: "Error fetching jobs",

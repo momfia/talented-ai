@@ -1,29 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Users, Star, Video, FileCheck, MessageSquare, Brain, Target, Download } from "lucide-react";
+import {
+  FileText,
+  Users,
+  Star,
+  Video,
+  FileCheck,
+  MessageSquare,
+  Brain,
+  Target,
+  Download,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import type { ApplicationData } from "@/types/application";
-import DashboardLayout from './DashboardLayout';
+import DashboardLayout from "./DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from "react-markdown";
 
-type Application = Database['public']['Tables']['applications']['Row'];
-type Job = Database['public']['Tables']['jobs']['Row'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
+type Application = Database["public"]["Tables"]["applications"]["Row"];
+type Job = Database["public"]["Tables"]["jobs"]["Row"];
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface ApplicationWithProfile extends Application {
   profiles: Profile;
 }
 
 interface ModalContent {
-  type: 'resume' | 'video' | 'interview';
+  type: "resume" | "video" | "interview";
   applicationData: {
     resume_path?: string;
     video_path?: string;
@@ -33,11 +48,13 @@ interface ModalContent {
 }
 
 export default function RecruiterDashboard() {
-  const [applications, setApplications] = useState<ApplicationWithProfile[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithProfile[]>(
+    []
+  );
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalContent, setModalContent] = useState<ModalContent | null>(null);
-  const [signedUrls, setSignedUrls] = useState<{[key: string]: string}>({});
+  const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,20 +63,17 @@ export default function RecruiterDashboard() {
 
   async function fetchData() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const [jobsResponse, applicationsResponse] = await Promise.all([
-        supabase
-          .from('jobs')
-          .select('*')
-          .eq('recruiter_id', user.id),
-        supabase
-          .from('applications')
-          .select(`
+        supabase.from("jobs").select("*").eq("recruiter_id", user.id),
+        supabase.from("applications").select(`
             *,
             profiles (*)
-          `)
+          `),
       ]);
 
       if (jobsResponse.error) throw jobsResponse.error;
@@ -71,21 +85,21 @@ export default function RecruiterDashboard() {
       toast({
         title: "Error fetching data",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   }
 
-  function getAIScore(aiAnalysis: ApplicationData['ai_analysis']) {
-    if (!aiAnalysis || typeof aiAnalysis !== 'object') return 'N/A';
+  function getAIScore(aiAnalysis: ApplicationData["ai_analysis"]) {
+    if (!aiAnalysis || typeof aiAnalysis !== "object") return "N/A";
     const score = (aiAnalysis as any).overall_score;
-    return score ? `${Math.round(score * 100)}%` : 'N/A';
+    return score ? `${Math.round(score * 100)}%` : "N/A";
   }
 
   function getInterviewScore(assessment_score: number | null) {
-    if (assessment_score === null) return 'N/A';
+    if (assessment_score === null) return "N/A";
     return `${Math.round(assessment_score)}%`;
   }
 
@@ -96,58 +110,72 @@ export default function RecruiterDashboard() {
       }
 
       const { data, error } = await supabase.storage
-        .from('applications')
+        .from("applications")
         .createSignedUrl(filePath, 3600); // 1 hour expiry
 
       if (error) throw error;
-      
-      setSignedUrls(prev => ({
+
+      setSignedUrls((prev) => ({
         ...prev,
-        [filePath]: data.signedUrl
+        [filePath]: data.signedUrl,
       }));
-      
+
       return data.signedUrl;
     } catch (error) {
-      console.error('Error getting file URL:', error);
+      console.error("Error getting file URL:", error);
       return null;
     }
   }
 
-  function formatAnalysisContent(content: any, type: 'resume' | 'interview'): JSX.Element {
+  function formatAnalysisContent(
+    content: any,
+    type: "resume" | "interview"
+  ): JSX.Element {
     if (!content) return <p>No analysis available</p>;
 
-    if (type === 'resume') {
+    if (type === "resume") {
       const formattedContent = Object.entries(content).map(([key, value]) => {
-        const formattedKey = key.split('_').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-        
-        if (typeof value === 'number') {
+        const formattedKey = key
+          .split("_")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+
+        if (typeof value === "number") {
           return (
             <div key={key} className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
+              <h3 className="text-sm font-semibold text-gray-700">
+                {formattedKey}
+              </h3>
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-2 w-full bg-gray-200 rounded-full">
-                  <div 
-                    className="h-2 bg-blue-500 rounded-full" 
+                  <div
+                    className="h-2 bg-blue-500 rounded-full"
                     style={{ width: `${Math.round(value * 100)}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium">{Math.round(value * 100)}%</span>
+                <span className="text-sm font-medium">
+                  {Math.round(value * 100)}%
+                </span>
               </div>
             </div>
           );
         }
-        
+
         return (
           <div key={key} className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
+            <h3 className="text-sm font-semibold text-gray-700">
+              {formattedKey}
+            </h3>
             <div className="mt-1 text-sm text-gray-600">
-              <ReactMarkdown components={{
-                p: ({children}) => <p className="mt-1">{children}</p>,
-                ul: ({children}) => <ul className="list-disc pl-4 mt-2">{children}</ul>,
-                li: ({children}) => <li className="mt-1">{children}</li>
-              }}>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <p className="mt-1">{children}</p>,
+                  ul: ({ children }) => (
+                    <ul className="list-disc pl-4 mt-2">{children}</ul>
+                  ),
+                  li: ({ children }) => <li className="mt-1">{children}</li>,
+                }}
+              >
                 {String(value)}
               </ReactMarkdown>
             </div>
@@ -155,15 +183,23 @@ export default function RecruiterDashboard() {
         );
       });
 
-      return <div className="space-y-4 bg-white rounded-lg p-6">{formattedContent}</div>;
+      return (
+        <div className="space-y-4 bg-white rounded-lg p-6">
+          {formattedContent}
+        </div>
+      );
     } else {
       return (
         <div className="prose prose-sm max-w-none">
-          <ReactMarkdown components={{
-            p: ({children}) => <p className="mt-2">{children}</p>,
-            ul: ({children}) => <ul className="list-disc pl-4 mt-2">{children}</ul>,
-            li: ({children}) => <li className="mt-1">{children}</li>
-          }}>
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="mt-2">{children}</p>,
+              ul: ({ children }) => (
+                <ul className="list-disc pl-4 mt-2">{children}</ul>
+              ),
+              li: ({ children }) => <li className="mt-1">{children}</li>,
+            }}
+          >
             {String(content)}
           </ReactMarkdown>
         </div>
@@ -173,22 +209,21 @@ export default function RecruiterDashboard() {
 
   function getStatusBadgeColor(status: string) {
     switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'interviewed':
-        return 'bg-blue-100 text-blue-800';
-      case 'accepted':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "interviewed":
+        return "bg-blue-100 text-blue-800";
+      case "accepted":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   }
 
   const hasInterviewData = (application: ApplicationWithProfile) => {
-    return application.interview_transcript || 
-           (application.ai_analysis && application.ai_analysis.interview_analysis);
+    return application.interview_transcript || application.interview_feedback;
   };
 
   const content = loading ? (
@@ -198,20 +233,23 @@ export default function RecruiterDashboard() {
   ) : (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-8">Recruiter Dashboard</h1>
-      
-      {jobs.map(job => {
-        const jobApplications = applications.filter(app => app.job_id === job.id);
-        
+
+      {jobs.map((job) => {
+        const jobApplications = applications.filter(
+          (app) => app.job_id === job.id
+        );
+
         return (
           <div key={job.id} className="mb-10">
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-6 w-6" />
               <h2 className="text-2xl font-semibold">{job.title}</h2>
               <Badge variant="secondary">
-                {jobApplications.length} candidate{jobApplications.length !== 1 ? 's' : ''}
+                {jobApplications.length} candidate
+                {jobApplications.length !== 1 ? "s" : ""}
               </Badge>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow">
               {jobApplications.map((application, index) => (
                 <div key={application.id}>
@@ -220,24 +258,36 @@ export default function RecruiterDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar>
-                          <AvatarImage 
-                            src={application.profiles?.avatar_url || ''} 
-                            alt={application.profiles?.full_name || 'Avatar'} 
+                          <AvatarImage
+                            src={application.profiles?.avatar_url || ""}
+                            alt={application.profiles?.full_name || "Avatar"}
                           />
                           <AvatarFallback>
-                            {application.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
+                            {application.profiles?.full_name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase() || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="font-semibold">
-                            {application.profiles?.full_name || 'Anonymous Candidate'}
+                            {application.profiles?.full_name ||
+                              "Anonymous Candidate"}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge className={getStatusBadgeColor(application.status)}>
+                            <Badge
+                              className={getStatusBadgeColor(
+                                application.status
+                              )}
+                            >
                               {application.status}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              Applied {new Date(application.created_at).toLocaleDateString()}
+                              Applied{" "}
+                              {new Date(
+                                application.created_at
+                              ).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -248,20 +298,22 @@ export default function RecruiterDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
-                              const signedUrl = await getFileUrl(application.resume_path!);
+                              const signedUrl = await getFileUrl(
+                                application.resume_path!
+                              );
                               if (signedUrl) {
                                 setModalContent({
-                                  type: 'resume',
+                                  type: "resume",
                                   applicationData: {
                                     resume_path: signedUrl,
-                                    ai_analysis: application.ai_analysis
-                                  }
+                                    ai_analysis: application.ai_analysis,
+                                  },
                                 });
                               } else {
                                 toast({
                                   title: "Error",
                                   description: "Could not access resume file",
-                                  variant: "destructive"
+                                  variant: "destructive",
                                 });
                               }
                             }}
@@ -275,20 +327,22 @@ export default function RecruiterDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
-                              const signedUrl = await getFileUrl(application.video_path!);
+                              const signedUrl = await getFileUrl(
+                                application.video_path!
+                              );
                               if (signedUrl) {
                                 setModalContent({
-                                  type: 'video',
+                                  type: "video",
                                   applicationData: {
                                     video_path: signedUrl,
-                                    ai_analysis: application.ai_analysis
-                                  }
+                                    ai_analysis: application.ai_analysis,
+                                  },
                                 });
                               } else {
                                 toast({
                                   title: "Error",
                                   description: "Could not access video file",
-                                  variant: "destructive"
+                                  variant: "destructive",
                                 });
                               }
                             }}
@@ -301,13 +355,16 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setModalContent({
-                              type: 'interview',
-                              applicationData: {
-                                interview_transcript: application.interview_transcript,
-                                ai_analysis: application.ai_analysis
-                              }
-                            })}
+                            onClick={() =>
+                              setModalContent({
+                                type: "interview",
+                                applicationData: {
+                                  interview_transcript:
+                                    application.interview_transcript,
+                                  ai_analysis: application.interview_feedback,
+                                },
+                              })
+                            }
                           >
                             <MessageSquare className="h-4 w-4 mr-1" />
                             Interview
@@ -317,14 +374,24 @@ export default function RecruiterDashboard() {
                     </div>
 
                     <div className="mt-4 flex items-center gap-6">
-                      <div className="flex items-center gap-2" title="Resume Analysis Score">
+                      <div
+                        className="flex items-center gap-2"
+                        title="Resume Analysis Score"
+                      >
                         <FileText className="h-5 w-5 text-blue-500" />
-                        <span className="font-medium">{getAIScore(application.ai_analysis)}</span>
+                        <span className="font-medium">
+                          {getAIScore(application.ai_analysis)}
+                        </span>
                       </div>
                       {application.assessment_score !== null && (
-                        <div className="flex items-center gap-2" title="Interview Score">
+                        <div
+                          className="flex items-center gap-2"
+                          title="Interview Score"
+                        >
                           <Target className="h-5 w-5 text-green-500" />
-                          <span className="font-medium">{getInterviewScore(application.assessment_score)}</span>
+                          <span className="font-medium">
+                            {getInterviewScore(application.assessment_score)}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -340,13 +407,13 @@ export default function RecruiterDashboard() {
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
-              {modalContent?.type === 'resume' && "Resume Review"}
-              {modalContent?.type === 'video' && "Video Review"}
-              {modalContent?.type === 'interview' && "Interview Details"}
+              {modalContent?.type === "resume" && "Resume Review"}
+              {modalContent?.type === "video" && "Video Review"}
+              {modalContent?.type === "interview" && "Interview Details"}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            {modalContent?.type === 'resume' && (
+            {modalContent?.type === "resume" && (
               <Tabs defaultValue="resume">
                 <TabsList>
                   <TabsTrigger value="resume">Resume</TabsTrigger>
@@ -363,14 +430,14 @@ export default function RecruiterDashboard() {
                   <div className="bg-gray-50 rounded-lg">
                     {formatAnalysisContent(
                       modalContent.applicationData.ai_analysis,
-                      'resume'
+                      "resume"
                     )}
                   </div>
                 </TabsContent>
               </Tabs>
             )}
 
-            {modalContent?.type === 'video' && (
+            {modalContent?.type === "video" && (
               <Tabs defaultValue="video">
                 <TabsList>
                   <TabsTrigger value="video">Video</TabsTrigger>
@@ -378,7 +445,10 @@ export default function RecruiterDashboard() {
                 </TabsList>
                 <TabsContent value="video" className="mt-4">
                   <video controls className="w-full rounded-lg">
-                    <source src={modalContent.applicationData.video_path} type="video/webm" />
+                    <source
+                      src={modalContent.applicationData.video_path}
+                      type="video/webm"
+                    />
                     Your browser does not support the video tag.
                   </video>
                 </TabsContent>
@@ -386,14 +456,14 @@ export default function RecruiterDashboard() {
                   <div className="prose prose-sm max-w-none p-6 bg-gray-50 rounded-lg">
                     {formatAnalysisContent(
                       modalContent.applicationData.ai_analysis,
-                      'interview'
+                      "interview"
                     )}
                   </div>
                 </TabsContent>
               </Tabs>
             )}
 
-            {modalContent?.type === 'interview' && (
+            {modalContent?.type === "interview" && (
               <Tabs defaultValue="analysis">
                 <TabsList>
                   <TabsTrigger value="analysis">Interview Analysis</TabsTrigger>
@@ -401,13 +471,16 @@ export default function RecruiterDashboard() {
                 </TabsList>
                 <TabsContent value="analysis" className="mt-4">
                   {formatAnalysisContent(
-                    modalContent.applicationData.interview_transcript,
-                    'interview'
+                    modalContent.applicationData.ai_analysis,
+                    "interview"
                   )}
                 </TabsContent>
                 <TabsContent value="transcript" className="mt-4">
                   <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg">
-                    {modalContent.applicationData.interview_transcript}
+                    {formatAnalysisContent(
+                      modalContent.applicationData.interview_transcript,
+                      "interview"
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>

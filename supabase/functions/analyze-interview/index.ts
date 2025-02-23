@@ -14,7 +14,19 @@ serve(async (req) => {
   }
 
   try {
-    const { applicationId, jobId, transcript } = await req.json();
+    console.log('Analyze interview function called');
+    const requestData = await req.json();
+    const { applicationId, jobId, transcript } = requestData;
+
+    console.log('Request data:', {
+      applicationId,
+      jobId,
+      transcriptLength: transcript?.length || 0
+    });
+
+    if (!applicationId || !jobId || !transcript) {
+      throw new Error('Missing required parameters');
+    }
 
     // Initialize Supabase client
     const supabase = createClient(
@@ -22,16 +34,23 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get job details
+    console.log('Fetching job details...');
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .select('*')
       .eq('id', jobId)
       .single();
 
-    if (jobError) throw jobError;
+    if (jobError) {
+      console.error('Error fetching job:', jobError);
+      throw jobError;
+    }
 
-    // Create analysis prompt
+    console.log('Job data retrieved:', {
+      title: jobData.title,
+      essentialAttributesCount: jobData.essential_attributes?.length || 0
+    });
+
     const systemPrompt = `You are an expert hiring manager tasked with evaluating interview transcripts. 
     Analyze the interview transcript and assess the candidate based on the job requirements.
     Provide a score from 0-100 and detailed feedback.`;
@@ -51,7 +70,7 @@ serve(async (req) => {
     2. Detailed feedback highlighting strengths and areas of concern
     3. Assessment of technical skills and cultural fit`;
 
-    // Get analysis from OpenAI
+    console.log('Calling OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,11 +87,18 @@ serve(async (req) => {
     });
 
     const data = await response.json();
-    const analysis = data.choices[0].message.content;
+    console.log('OpenAI response received');
+    
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
 
-    // Extract score using regex (assumes the AI includes a numeric score)
+    const analysis = data.choices[0].message.content;
+    console.log('Analysis length:', analysis.length);
+
     const scoreMatch = analysis.match(/\b([0-9]{1,2}|100)\b/);
     const score = scoreMatch ? parseInt(scoreMatch[0]) : 0;
+    console.log('Extracted score:', score);
 
     return new Response(
       JSON.stringify({

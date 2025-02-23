@@ -52,6 +52,80 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     };
   };
 
+  const handleInterviewEnd = async () => {
+    console.log('Ending interview session...');
+    if (transcriptRef.current.length === 0) {
+      console.log('No transcript available, skipping analysis');
+      return;
+    }
+
+    const fullTranscript = transcriptRef.current.join('\n');
+    console.log('Full transcript length:', fullTranscript.length);
+
+    try {
+      console.log('Updating application with transcript...');
+      const { error: transcriptError } = await supabase
+        .from('applications')
+        .update({
+          conversation_transcript: fullTranscript,
+          status: 'interview_completed'
+        })
+        .eq('id', applicationId);
+
+      if (transcriptError) {
+        console.error('Error updating transcript:', transcriptError);
+        throw transcriptError;
+      }
+
+      console.log('Calling analyze-interview function...');
+      const { data: assessmentData, error: assessmentError } = await supabase
+        .functions.invoke('analyze-interview', {
+          body: JSON.stringify({
+            applicationId,
+            jobId,
+            transcript: fullTranscript
+          })
+        });
+
+      if (assessmentError) {
+        console.error('Error from analyze-interview function:', assessmentError);
+        throw assessmentError;
+      }
+
+      if (!assessmentData) {
+        throw new Error('No assessment data received from function');
+      }
+
+      console.log('Assessment data received:', assessmentData);
+
+      console.log('Updating application with assessment results...');
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update({
+          assessment_score: assessmentData.score,
+          interview_feedback: assessmentData.feedback
+        })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        console.error('Error updating assessment:', updateError);
+        throw updateError;
+      }
+
+      toast({
+        title: "Interview Completed",
+        description: "Interview assessment has been generated.",
+      });
+    } catch (error) {
+      console.error('Error processing interview:', error);
+      toast({
+        title: "Error Processing Interview",
+        description: error instanceof Error ? error.message : "There was an issue saving the interview results.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const conversation = useConversation({
     apiKey: import.meta.env.VITE_ELEVEN_LABS_API_KEY,
     onConnect: () => {
@@ -74,57 +148,20 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         audioStreamRef.current = null;
       }
 
-      if (transcriptRef.current.length > 0) {
-        const fullTranscript = transcriptRef.current.join('\n');
-        try {
-          const { error: transcriptError } = await supabase
-            .from('applications')
-            .update({
-              conversation_transcript: fullTranscript,
-              status: 'interview_completed'
-            })
-            .eq('id', applicationId);
-
-          if (transcriptError) throw transcriptError;
-
-          const { data: assessmentData, error: assessmentError } = await supabase
-            .functions.invoke('analyze-interview', {
-              body: { applicationId, jobId, transcript: fullTranscript }
-            });
-
-          if (assessmentError) throw assessmentError;
-
-          const { error: updateError } = await supabase
-            .from('applications')
-            .update({
-              assessment_score: assessmentData.score,
-              interview_feedback: assessmentData.feedback
-            })
-            .eq('id', applicationId);
-
-          if (updateError) throw updateError;
-
-          toast({
-            title: "Interview Completed",
-            description: "Interview assessment has been generated.",
-          });
-        } catch (error) {
-          console.error('Error processing interview:', error);
-          toast({
-            title: "Error Processing Interview",
-            description: "There was an issue saving the interview results.",
-            variant: "destructive",
-          });
-        }
-      }
+      await handleInterviewEnd();
     },
     onMessage: (message) => {
-      console.log('Received message:', message);
+      console.log('Received message type:', message.type);
       if (message.type === 'transcript') {
-        transcriptRef.current.push(`Human: ${message.data?.text || ''}`);
+        const text = message.data?.text || '';
+        console.log('Adding human transcript:', text);
+        transcriptRef.current.push(`Human: ${text}`);
       } else if (message.type === 'response') {
-        transcriptRef.current.push(`AI: ${message.data?.text || ''}`);
+        const text = message.data?.text || '';
+        console.log('Adding AI response:', text);
+        transcriptRef.current.push(`AI: ${text}`);
       } else if (message.type === 'error') {
+        console.error('Message error:', message.data);
         toast({
           title: "Interview Error",
           description: message.data?.message || "An error occurred",
@@ -154,17 +191,6 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       }
     },
   });
-
-  const { isSpeaking } = conversation;
-
-  useEffect(() => {
-    return () => {
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach(track => track.stop());
-        audioStreamRef.current = null;
-      }
-    };
-  }, []);
 
   const initializeAudio = async () => {
     try {
@@ -364,15 +390,15 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
       ) : (
         <div className="space-y-4 w-full">
           <div className="flex items-center justify-center gap-4">
-            <div className={`p-4 rounded-full transition-all duration-200 ${isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
-              {isSpeaking ? (
+            <div className={`p-4 rounded-full transition-all duration-200 ${conversation.isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
+              {conversation.isSpeaking ? (
                 <Mic className="h-6 w-6 text-green-600" />
               ) : (
                 <MicOff className="h-6 w-6 text-gray-600" />
               )}
             </div>
             <div className="text-sm text-muted-foreground font-medium">
-              {isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
+              {conversation.isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
             </div>
           </div>
           
@@ -380,7 +406,7 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
             <Button
               variant="outline"
               onClick={() => {
-                console.log('Ending interview session...');
+                console.log('Manually ending interview session...');
                 conversation.endSession();
               }}
               className="mt-4"

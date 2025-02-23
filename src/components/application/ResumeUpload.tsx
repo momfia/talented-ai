@@ -5,7 +5,7 @@ import { Upload, Loader2, FileText, PenSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ResumeBuilder } from "./ResumeBuilder";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ResumeUploadProps {
   jobId: string;
@@ -159,17 +159,17 @@ export function ResumeUpload({ jobId, userId, onUploadComplete }: ResumeUploadPr
               <div className="h-px w-24 bg-border" />
             </div>
 
-            <Sheet>
-              <SheetTrigger asChild>
+            <Dialog>
+              <DialogTrigger asChild>
                 <Button variant="secondary" size="lg" className="w-64">
                   <PenSquare className="mr-2 h-4 w-4" />
                   Build Resume
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[800px] sm:w-[800px]">
-                <SheetHeader>
-                  <SheetTitle>Build Your Resume</SheetTitle>
-                </SheetHeader>
+              </DialogTrigger>
+              <DialogContent className="max-w-7xl w-full max-h-screen overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Build Your Resume</DialogTitle>
+                </DialogHeader>
                 <div className="mt-6">
                   <ResumeBuilder 
                     onResumeGenerated={(markdown) => {
@@ -196,8 +196,8 @@ export function ResumeUpload({ jobId, userId, onUploadComplete }: ResumeUploadPr
                     </Button>
                   )}
                 </div>
-              </SheetContent>
-            </Sheet>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
         <p className="text-sm text-muted-foreground mt-4">

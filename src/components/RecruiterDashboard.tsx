@@ -40,6 +40,7 @@ interface ModalContent {
     resume_path?: string;
     video_path?: string;
     ai_analysis?: any;
+    video_analysis?: any;
     interview_transcript?: string;
   };
 }
@@ -134,9 +135,50 @@ export default function RecruiterDashboard() {
 
   function formatAnalysisContent(
     content: any,
-    type: "resume" | "interview"
+    type: "resume" | "video" | "interview"
   ): JSX.Element {
     if (!content) return <p>No analysis available</p>;
+
+    if (type === "video") {
+      try {
+        const parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
+        return (
+          <div className="space-y-4 bg-white rounded-lg p-6">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">Motivation</h3>
+              <p className="mt-1 text-sm text-gray-600">{parsedContent.motivation}</p>
+            </div>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">Experience Summary</h3>
+              <p className="mt-1 text-sm text-gray-600">{parsedContent.experience_summary}</p>
+            </div>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">Communication Score</h3>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="h-2 w-full bg-gray-200 rounded-full">
+                  <div
+                    className="h-2 bg-blue-500 rounded-full"
+                    style={{ width: `${parsedContent.communication_score}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium">{parsedContent.communication_score}%</span>
+              </div>
+            </div>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">Key Strengths</h3>
+              <ul className="mt-1 list-disc pl-4">
+                {parsedContent.key_strengths.map((strength: string, index: number) => (
+                  <li key={index} className="text-sm text-gray-600">{strength}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        );
+      } catch (error) {
+        console.error('Error parsing video analysis:', error);
+        return <p>Error displaying video analysis</p>;
+      }
+    }
 
     if (type === "resume") {
       const formattedContent = Object.entries(content).map(([key, value]) => {
@@ -460,8 +502,8 @@ export default function RecruiterDashboard() {
                 <TabsContent value="analysis" className="mt-4">
                   <div className="prose prose-sm max-w-none p-6 bg-gray-50 rounded-lg">
                     {formatAnalysisContent(
-                      modalContent.applicationData.ai_analysis,
-                      "interview"
+                      modalContent.applicationData.video_analysis,
+                      "video"
                     )}
                   </div>
                 </TabsContent>

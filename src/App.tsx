@@ -17,6 +17,7 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/jobs/new" element={<JobForm />} />
+        <Route path="/jobs/:id/edit" element={<JobForm />} />
         <Route path="/jobs" element={<JobManagement />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/public/jobs/:id/apply" element={<ApplicationFlow />} />

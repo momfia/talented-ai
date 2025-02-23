@@ -23,9 +23,14 @@ interface ApplicationWithProfile extends Application {
 }
 
 interface ModalContent {
-  type: 'video' | 'transcript' | 'analysis';
-  title: string;
-  content: string;
+  type: 'resume' | 'video' | 'interview';
+  applicationData: {
+    resume_path?: string;
+    video_path?: string;
+    ai_analysis?: any;
+    interview_transcript?: string;
+    video_analysis?: string;
+  };
 }
 
 export default function RecruiterDashboard() {
@@ -227,57 +232,29 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={async () => {
-                              const url = await getFileUrl(application.resume_path!);
-                              if (url) {
-                                window.open(url, '_blank');
-                              } else {
-                                toast({
-                                  title: "Error",
-                                  description: "Could not access resume file",
-                                  variant: "destructive"
-                                });
+                            onClick={() => setModalContent({
+                              type: 'resume',
+                              applicationData: {
+                                resume_path: application.resume_path,
+                                ai_analysis: application.ai_analysis
                               }
-                            }}
+                            })}
                           >
                             <Download className="h-4 w-4 mr-1" />
                             Resume
-                          </Button>
-                        )}
-                        {application.resume_path && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setModalContent({
-                              type: 'analysis',
-                              title: 'Resume Analysis',
-                              content: JSON.stringify(application.ai_analysis)
-                            })}
-                          >
-                            <FileCheck className="h-4 w-4 mr-1" />
-                            Resume Analysis
                           </Button>
                         )}
                         {application.video_path && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={async () => {
-                              const url = await getFileUrl(application.video_path!);
-                              if (url) {
-                                setModalContent({
-                                  type: 'video',
-                                  title: 'Video Introduction',
-                                  content: url
-                                });
-                              } else {
-                                toast({
-                                  title: "Error",
-                                  description: "Could not access video file",
-                                  variant: "destructive"
-                                });
+                            onClick={() => setModalContent({
+                              type: 'video',
+                              applicationData: {
+                                video_path: application.video_path,
+                                video_analysis: application.video_analysis
                               }
-                            }}
+                            })}
                           >
                             <Video className="h-4 w-4 mr-1" />
                             View Video
@@ -288,9 +265,10 @@ export default function RecruiterDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={() => setModalContent({
-                              type: 'analysis',
-                              title: 'Interview Analysis',
-                              content: application.interview_transcript || ''
+                              type: 'interview',
+                              applicationData: {
+                                interview_transcript: application.interview_transcript
+                              }
                             })}
                           >
                             <Brain className="h-4 w-4 mr-1" />
@@ -323,38 +301,76 @@ export default function RecruiterDashboard() {
       <Dialog open={!!modalContent} onOpenChange={() => setModalContent(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">{modalContent?.title}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {modalContent?.type === 'resume' && "Resume Review"}
+              {modalContent?.type === 'video' && "Video Review"}
+              {modalContent?.type === 'interview' && "Interview Review"}
+            </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            {modalContent?.type === 'video' && (
-              <video controls className="w-full rounded-lg">
-                <source src={modalContent.content} type="video/webm" />
-                Your browser does not support the video tag.
-              </video>
+            {modalContent?.type === 'resume' && (
+              <Tabs defaultValue="resume">
+                <TabsList>
+                  <TabsTrigger value="resume">Resume</TabsTrigger>
+                  <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                </TabsList>
+                <TabsContent value="resume" className="mt-4">
+                  <iframe
+                    src={modalContent.applicationData.resume_path}
+                    className="w-full h-[60vh] rounded-lg border"
+                  />
+                </TabsContent>
+                <TabsContent value="analysis" className="mt-4">
+                  <div className="bg-gray-50 rounded-lg">
+                    {formatAnalysisContent(
+                      modalContent.applicationData.ai_analysis,
+                      'resume'
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             )}
-            {modalContent?.type === 'analysis' && modalContent.title === 'Interview Analysis' && (
+
+            {modalContent?.type === 'video' && (
+              <Tabs defaultValue="video">
+                <TabsList>
+                  <TabsTrigger value="video">Video</TabsTrigger>
+                  <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                </TabsList>
+                <TabsContent value="video" className="mt-4">
+                  <video controls className="w-full rounded-lg">
+                    <source src={modalContent.applicationData.video_path} type="video/webm" />
+                    Your browser does not support the video tag.
+                  </video>
+                </TabsContent>
+                <TabsContent value="analysis" className="mt-4">
+                  <div className="prose prose-sm max-w-none p-6 bg-gray-50 rounded-lg">
+                    <ReactMarkdown>
+                      {modalContent.applicationData.video_analysis || 'No analysis available'}
+                    </ReactMarkdown>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {modalContent?.type === 'interview' && (
               <Tabs defaultValue="analysis">
                 <TabsList>
                   <TabsTrigger value="analysis">Analysis</TabsTrigger>
                   <TabsTrigger value="transcript">Raw Transcript</TabsTrigger>
                 </TabsList>
                 <TabsContent value="analysis" className="mt-4">
-                  {formatAnalysisContent(modalContent.content, 'interview')}
+                  {formatAnalysisContent(
+                    modalContent.applicationData.interview_transcript,
+                    'interview'
+                  )}
                 </TabsContent>
                 <TabsContent value="transcript" className="mt-4">
                   <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg">
-                    {modalContent.content}
+                    {modalContent.applicationData.interview_transcript}
                   </div>
                 </TabsContent>
               </Tabs>
-            )}
-            {modalContent?.type === 'analysis' && modalContent.title !== 'Interview Analysis' && (
-              <div className="bg-gray-50 rounded-lg">
-                {formatAnalysisContent(
-                  JSON.parse(modalContent.content),
-                  modalContent.title.toLowerCase().includes('interview') ? 'interview' : 'resume'
-                )}
-              </div>
             )}
           </div>
         </DialogContent>

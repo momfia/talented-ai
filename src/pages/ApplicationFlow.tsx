@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw, Mic, MicOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Upload, Video, PhoneCall, User, RefreshCcw, Mic, MicOff, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
 import { ELEVEN_LABS_API_KEY } from '@/config/eleven-labs';
@@ -167,6 +167,17 @@ export default function ApplicationFlow() {
     }
   }, [status, isSpeaking]);
 
+  const handleStepChange = (step: ApplicationStep) => {
+    setCurrentStep(step);
+    if (step === 'video') {
+      setShowPreview(false);
+      setRecordedBlob(null);
+      if (videoRef.current) {
+        videoRef.current.src = '';
+      }
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !userId || !jobId) return;
@@ -227,7 +238,7 @@ export default function ApplicationFlow() {
         toast({
           title: "Resume uploaded",
           description: "Resume was uploaded but analysis failed. You can still continue.",
-          variant: "warning",
+          variant: "destructive"
         });
       } else {
         toast({
@@ -575,10 +586,22 @@ export default function ApplicationFlow() {
               <CardTitle>Job Application Process</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                  Upload Your Resume
+              <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50' : ''}`}>
+                <h3 className="font-semibold flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                    Upload Your Resume
+                  </div>
+                  {currentStep !== 'resume' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStepChange('resume')}
+                      className="hover:bg-gray-100"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                 </h3>
                 {currentStep === 'resume' && (
                   <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6">
@@ -614,10 +637,22 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                  Record Video Introduction
+              <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50' : ''}`}>
+                <h3 className="font-semibold flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                    Record Video Introduction
+                  </div>
+                  {currentStep === 'interview' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStepChange('video')}
+                      className="hover:bg-gray-100"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                 </h3>
                 {currentStep === 'video' && (
                   <div className="space-y-4">
@@ -679,7 +714,7 @@ export default function ApplicationFlow() {
                 )}
               </div>
 
-              <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
                   AI Interview

@@ -1,22 +1,46 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { User } from "lucide-react";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Mail, User } from "lucide-react";
+
+interface UserProfile {
+  id: string;
+  email?: string;
+  avatar_url?: string;
+  full_name?: string;
+  role?: 'recruiter' | 'candidate';
+}
 
 export default function Index() {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<'recruiter' | 'candidate'>('candidate');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error) {
+          setUserProfile({
+            id: session.user.id,
+            email: session.user.email,
+            avatar_url: profileData?.avatar_url,
+            full_name: profileData?.full_name,
+            role: profileData?.role
+          });
+        }
       }
     };
     checkUser();
@@ -44,6 +68,11 @@ export default function Index() {
     }
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUserProfile(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Header */}
@@ -56,11 +85,16 @@ export default function Index() {
               </div>
               <span className="font-bold text-xl">Talented AI</span>
             </div>
+            {userProfile && (
+              <Button variant="outline" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            )}
           </div>
         </nav>
       </header>
 
-      {/* Hero Section */}
+      {/* Main Content */}
       <main className="relative">
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -71,46 +105,85 @@ export default function Index() {
         {/* Content */}
         <div className="container mx-auto px-6 pt-20 pb-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left column - Copy */}
+            {/* Left column */}
             <div className="space-y-8">
-              <h1 className="text-5xl font-bold leading-tight gradient-text">
-                Find Your Perfect Match with AI-Powered Recruitment
-              </h1>
-              <p className="text-xl text-gray-600">
-                Connect talent with opportunity using advanced AI matching technology. 
-                Whether you're hiring or seeking your next role, we make the process 
-                seamless and intelligent.
-              </p>
-              
-              {/* Login Form */}
-              <div className="max-w-md space-y-6 bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
-                <h2 className="text-2xl font-semibold">Get Started</h2>
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <Label className="text-base">I am a...</Label>
-                    <RadioGroup
-                      value={selectedRole}
-                      onValueChange={(value: 'recruiter' | 'candidate') => setSelectedRole(value)}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="candidate" id="candidate" />
-                        <Label htmlFor="candidate">Job Seeker</Label>
+              {userProfile ? (
+                <Card className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-sm">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={userProfile.avatar_url || ''} />
+                        <AvatarFallback>
+                          {userProfile.full_name
+                            ?.split(' ')
+                            .map(n => n[0])
+                            .join('')
+                            .toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h2 className="text-2xl font-semibold">{userProfile.full_name || 'User'}</h2>
+                        <p className="text-muted-foreground capitalize">{userProfile.role || 'User'}</p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="recruiter" id="recruiter" />
-                        <Label htmlFor="recruiter">Recruiter</Label>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{userProfile.email}</span>
+                    </div>
+                    <div className="pt-4">
+                      <Button 
+                        className="w-full"
+                        onClick={() => navigate(userProfile.role === 'recruiter' ? '/recruiter-dashboard' : '/jobs')}
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <h1 className="text-5xl font-bold leading-tight gradient-text">
+                    Find Your Perfect Match with AI-Powered Recruitment
+                  </h1>
+                  <p className="text-xl text-gray-600">
+                    Connect talent with opportunity using advanced AI matching technology. 
+                    Whether you're hiring or seeking your next role, we make the process 
+                    seamless and intelligent.
+                  </p>
+                  
+                  {/* Login Form */}
+                  <div className="max-w-md space-y-6 bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
+                    <h2 className="text-2xl font-semibold">Get Started</h2>
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <Label className="text-base">I am a...</Label>
+                        <RadioGroup
+                          value={selectedRole}
+                          onValueChange={(value: 'recruiter' | 'candidate') => setSelectedRole(value)}
+                          className="grid grid-cols-2 gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="candidate" id="candidate" />
+                            <Label htmlFor="candidate">Job Seeker</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="recruiter" id="recruiter" />
+                            <Label htmlFor="recruiter">Recruiter</Label>
+                          </div>
+                        </RadioGroup>
                       </div>
-                    </RadioGroup>
+                      <Button 
+                        className="w-full"
+                        onClick={handleGoogleLogin}
+                      >
+                        Continue with Google
+                      </Button>
+                    </div>
                   </div>
-                  <Button 
-                    className="w-full"
-                    onClick={handleGoogleLogin}
-                  >
-                    Continue with Google
-                  </Button>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             {/* Right column - Features */}

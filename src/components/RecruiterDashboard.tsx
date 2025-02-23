@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Users, Star, Video, FileCheck, MessageSquare } from "lucide-react";
+import { FileText, Users, Star, Video, FileCheck, MessageSquare, Brain, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -75,6 +75,11 @@ export default function RecruiterDashboard() {
     if (!aiAnalysis || typeof aiAnalysis !== 'object') return 'N/A';
     const score = (aiAnalysis as any).overall_score;
     return score ? `${Math.round(score * 100)}%` : 'N/A';
+  }
+
+  function getInterviewScore(assessment_score: number | null) {
+    if (assessment_score === null) return 'N/A';
+    return `${Math.round(assessment_score * 100)}%`;
   }
 
   function getStatusBadgeColor(status: string) {
@@ -186,16 +191,34 @@ export default function RecruiterDashboard() {
                             Interview Notes
                           </Button>
                         )}
+                        {application.interview_feedback && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setModalContent({
+                              type: 'analysis',
+                              title: 'Interview Analysis',
+                              content: application.interview_feedback
+                            })}
+                          >
+                            <Brain className="h-4 w-4 mr-1" />
+                            Interview Analysis
+                          </Button>
+                        )}
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                          <Star className="h-5 w-5 text-yellow-500" />
-                          <span className="font-medium">{getAIScore(application.ai_analysis)}</span>
-                        </div>
+                    <div className="mt-4 flex items-center gap-6">
+                      <div className="flex items-center gap-2" title="Resume Analysis Score">
+                        <FileText className="h-5 w-5 text-blue-500" />
+                        <span className="font-medium">{getAIScore(application.ai_analysis)}</span>
                       </div>
+                      {application.assessment_score !== null && (
+                        <div className="flex items-center gap-2" title="Interview Score">
+                          <Target className="h-5 w-5 text-green-500" />
+                          <span className="font-medium">{getInterviewScore(application.assessment_score)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

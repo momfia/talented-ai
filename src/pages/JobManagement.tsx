@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from '@/components/DashboardLayout';
 
 type Job = {
   id: string;
@@ -65,22 +66,18 @@ export default function JobManagement() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto p-6">
+  const content = loading ? (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+  ) : (
+    <div className="p-6">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold">Job Listings</h1>
           <p className="text-muted-foreground mt-1">Manage your job postings</p>
         </div>
-        <Button onClick={() => navigate('/create-job')}>
+        <Button onClick={() => navigate('/jobs/new')}>
           <Plus className="w-4 h-4 mr-2" />
           Create New Job
         </Button>
@@ -94,7 +91,7 @@ export default function JobManagement() {
             Get started by creating your first job posting
           </p>
           <Button
-            onClick={() => navigate('/create-job')}
+            onClick={() => navigate('/jobs/new')}
             className="mt-4"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -135,4 +132,6 @@ export default function JobManagement() {
       )}
     </div>
   );
+
+  return <DashboardLayout>{content}</DashboardLayout>;
 }

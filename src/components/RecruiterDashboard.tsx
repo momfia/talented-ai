@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import type { ApplicationData } from "@/types/application";
+import DashboardLayout from './DashboardLayout';
 
 type Application = Database['public']['Tables']['applications']['Row'];
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -30,57 +31,28 @@ export default function RecruiterDashboard() {
 
   async function fetchData() {
     try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) throw userError;
-      if (!user) {
-        toast({
-          title: "Authentication Error",
-          description: "Please sign in to view the dashboard",
-          variant: "destructive"
-        });
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      console.log("Fetching data for recruiter:", user.id);
+      const [jobsResponse, applicationsResponse] = await Promise.all([
+        supabase
+          .from('jobs')
+          .select('*')
+          .eq('recruiter_id', user.id),
+        supabase
+          .from('applications')
+          .select(`
+            *,
+            profiles (*)
+          `)
+      ]);
 
-      // First get the recruiter's jobs
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('recruiter_id', user.id);
+      if (jobsResponse.error) throw jobsResponse.error;
+      if (applicationsResponse.error) throw applicationsResponse.error;
 
-      if (jobsError) throw jobsError;
-      
-      if (!jobsData || jobsData.length === 0) {
-        console.log("No jobs found for recruiter");
-        setJobs([]);
-        setApplications([]);
-        setLoading(false);
-        return;
-      }
-
-      console.log("Found jobs:", jobsData.length);
-      setJobs(jobsData);
-
-      // Get all applications for the recruiter's jobs
-      const jobIds = jobsData.map(job => job.id);
-      const { data: applicationsData, error: applicationsError } = await supabase
-        .from('applications')
-        .select(`
-          *,
-          profiles (*)
-        `)
-        .in('job_id', jobIds);
-
-      if (applicationsError) throw applicationsError;
-
-      console.log("Found applications:", applicationsData?.length ?? 0);
-      setApplications(applicationsData || []);
-
+      setJobs(jobsResponse.data || []);
+      setApplications(applicationsResponse.data || []);
     } catch (error: any) {
-      console.error("Dashboard error:", error);
       toast({
         title: "Error fetching data",
         description: error.message,
@@ -97,36 +69,12 @@ export default function RecruiterDashboard() {
     return score ? `${Math.round(score * 100)}%` : 'N/A';
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-lg">Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  if (jobs.length === 0) {
-    return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-8">Recruiter Dashboard</h1>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-gray-600">
-              No jobs found. Start by creating a new job posting.
-            </p>
-            <div className="mt-4 flex justify-center">
-              <Button onClick={() => window.location.href = '/jobs/new'}>
-                Create Job Posting
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto p-6">
+  const content = loading ? (
+    <div className="flex justify-center items-center min-h-screen">
+      <p className="text-lg">Loading dashboard...</p>
+    </div>
+  ) : (
+    <div className="p-6">
       <h1 className="text-3xl font-bold mb-8">Recruiter Dashboard</h1>
       
       {jobs.map(job => {
@@ -137,9 +85,6 @@ export default function RecruiterDashboard() {
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-6 w-6" />
               <h2 className="text-2xl font-semibold">{job.title}</h2>
-              <span className="text-sm text-gray-500">
-                ({jobApplications.length} application{jobApplications.length !== 1 ? 's' : ''})
-              </span>
             </div>
             
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -193,4 +138,6 @@ export default function RecruiterDashboard() {
       </Dialog>
     </div>
   );
+
+  return <DashboardLayout>{content}</DashboardLayout>;
 }

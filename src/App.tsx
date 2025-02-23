@@ -19,7 +19,7 @@ function App() {
         <Route path="/jobs/new" element={<JobForm />} />
         <Route path="/jobs" element={<JobManagement />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
-        <Route path="/apply/:jobId" element={<ApplicationFlow />} />
+        <Route path="/public/jobs/:id/apply" element={<ApplicationFlow />} />
         <Route path="/public/jobs/:id" element={<PublicJobView />} />
         <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
         <Route path="*" element={<NotFound />} />

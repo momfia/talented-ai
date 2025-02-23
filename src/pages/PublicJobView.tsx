@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -105,7 +106,7 @@ export default function PublicJobView() {
             <div className="flex justify-center mt-6">
               <Button
                 size="lg"
-                onClick={() => navigate(`/apply/${job.id}`)}
+                onClick={() => navigate(`/public/jobs/${job.id}/apply`)}
               >
                 Apply for this Position
               </Button>

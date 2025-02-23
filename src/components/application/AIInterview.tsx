@@ -21,6 +21,13 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
   const audioStreamRef = useRef<MediaStream | null>(null);
   const transcriptRef = useRef<string[]>([]);
 
+  const updateLastThreeLines = (newLine: string) => {
+    setLastThreeLines(prev => {
+      const updated = [...prev, newLine];
+      return updated.slice(-3);
+    });
+  };
+
   const getFirstName = (fullName?: string) => {
     if (!fullName) return '';
     return fullName.split(' ')[0];
@@ -156,8 +163,16 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       await handleInterviewEnd();
     },
     onMessage: (message) => {
+      console.log('Received message:', message);
+      
+      if (!message || typeof message.type === 'undefined') {
+        console.error('Invalid message received:', message);
+        return;
+      }
+
       console.log('Received message type:', message.type);
-      if (message.type === 'transcript') {
+      
+      if (message.type === 'text' || message.type === 'transcript') {
         const text = message.data?.text || '';
         console.log('Adding human transcript:', text);
         if (text.trim()) {
@@ -165,7 +180,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
           transcriptRef.current.push(`Human: ${text}`);
           updateLastThreeLines(line);
         }
-      } else if (message.type === 'response') {
+      } else if (message.type === 'message' || message.type === 'response') {
         const text = message.data?.text || '';
         console.log('Adding AI response:', text);
         if (text.trim()) {
@@ -444,9 +459,7 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
               variant="outline"
               onClick={() => {
                 console.log('Manually ending interview session...');
-                if (transcriptRef.current.length === 0) {
-                  console.log('Current transcript entries:', transcriptRef.current);
-                }
+                console.log('Current transcript entries:', transcriptRef.current);
                 conversation.endSession();
               }}
               className="mt-4"

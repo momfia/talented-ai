@@ -52,12 +52,20 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         name: firstName,
         fullName: candidateInfo?.full_name,
         pronunciationNote: candidateInfo?.pronunciation_note,
-        analysis: applicationData.ai_analysis
+        analysis: applicationData.ai_analysis,
+        videoAnalysis: applicationData.video_analysis,
+        videoTranscript: applicationData.video_transcript,
+        previousInteractions: {
+          videoIntroduction: applicationData.video_transcript 
+            ? "The candidate has provided a video introduction. Here's what they said: " + applicationData.video_transcript
+            : "No video introduction provided."
+        }
       },
       interviewGoals: [
         "Assess candidate's qualifications against job requirements",
         "Evaluate communication skills and cultural fit",
-        "Allow candidate to demonstrate their experience"
+        "Allow candidate to demonstrate their experience",
+        "Reference their video introduction if relevant to show continuity"
       ]
     };
   };
@@ -277,7 +285,9 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
           resume_path,
           video_path,
           ai_analysis,
-          key_attributes
+          key_attributes,
+          video_transcript,
+          video_analysis
         `)
         .eq('id', applicationId)
         .single();
@@ -292,8 +302,8 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
           candidateInfo?.pronunciation_note ? 
           ` Before we begin, I want to make sure I'm pronouncing your name correctly. ${candidateInfo.pronunciation_note} Please let me know if I should pronounce it differently.` : 
           ''
-        } I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?` :
-        "Hello! I'm Erin, your interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
+        } I've reviewed your application${applicationData.video_transcript ? ' and your video introduction' : ''}, and I'd like to ask you some questions about your experience. Are you ready to begin?` :
+        "Hello! I'm Erin, your interviewer today. I've reviewed your application, and I'd like to ask you some questions about your experience. Are you ready to begin?";
 
       const interviewContext = formatInterviewContext(jobData as JobData, applicationData as ApplicationData);
       console.log('Starting interview with context:', interviewContext);
@@ -305,8 +315,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         overrides: {
           agent: {
             language: "en",
-            prompt: {
-              prompt: `You are Erin, a warm, engaging, and empathetic recruiting agent conducting this job interview. Your role is to connect with candidates on a personal level, treating each conversation like a genuine dialogue rather than an automated script.
+            prompt: `You are Erin, a warm, engaging, and empathetic recruiting agent conducting this job interview. Your role is to connect with candidates on a personal level, treating each conversation like a genuine dialogue rather than an automated script.
 
 Interview Context:
 ${JSON.stringify(interviewContext, null, 2)}
@@ -316,6 +325,7 @@ Guidelines for the conversation:
 1. Warm, Personalized Introduction:
 - Start with a friendly greeting
 - Use the candidate's name sparingly after the opening exchanges to build rapport
+- If they provided a video introduction, reference specific points from it to show continuity
 
 2. Natural, Evolving Dialogue:
 - Begin with open-ended questions about their career journey
@@ -324,6 +334,7 @@ Guidelines for the conversation:
 - Avoid repeating responses and resynthesizing them, that wastes time, keep the candidate engaged
 - Don't give them affirmation about whether they are fit for the job or not, dont give expectations.
 - Transition smoothly from friendly questions to probing inquiries
+- Reference insights from their video introduction when relevant
 
 3. Active Listening & Intelligent Follow-Up:
 - Adapt questions based on their responses

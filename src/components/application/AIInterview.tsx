@@ -165,29 +165,29 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onMessage: (message) => {
       console.log('Received message:', message);
       
-      if (!message || typeof message.source === 'undefined') {
+      if (!message || !message.source || !message.text) {
         console.error('Invalid message received:', message);
         return;
       }
 
-      console.log('Received message source:', message.source);
-      
+      const text = message.text.trim();
+      if (!text) return;
+
+      let line = '';
       if (message.source === 'user') {
-        const text = message.text || '';
-        console.log('Adding user transcript:', text);
-        if (text.trim()) {
-          const line = `You: ${text}`;
-          transcriptRef.current.push(`Human: ${text}`);
-          updateLastThreeLines(line);
-        }
+        line = `You: ${text}`;
+        transcriptRef.current.push(`Human: ${text}`);
       } else if (message.source === 'ai') {
-        const text = message.text || '';
-        console.log('Adding AI response:', text);
-        if (text.trim()) {
-          const line = `AI: ${text}`;
-          transcriptRef.current.push(line);
-          updateLastThreeLines(line);
-        }
+        line = `AI: ${text}`;
+        transcriptRef.current.push(line);
+      }
+
+      if (line) {
+        console.log('Adding line to transcript:', line);
+        setLastThreeLines(prev => {
+          const updated = [...prev, line];
+          return updated.slice(-3);
+        });
       }
     },
     onError: (error) => {

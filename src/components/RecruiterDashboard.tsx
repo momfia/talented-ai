@@ -186,6 +186,11 @@ export default function RecruiterDashboard() {
     }
   }
 
+  const hasInterviewData = (application: ApplicationWithProfile) => {
+    return application.interview_transcript || 
+           (application.ai_analysis && application.ai_analysis.interview_analysis);
+  };
+
   const content = loading ? (
     <div className="flex justify-center items-center min-h-screen">
       <p className="text-lg">Loading dashboard...</p>
@@ -292,7 +297,7 @@ export default function RecruiterDashboard() {
                             Video
                           </Button>
                         )}
-                        {application.interview_transcript && (
+                        {hasInterviewData(application) && (
                           <Button
                             variant="outline"
                             size="sm"

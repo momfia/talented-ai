@@ -144,18 +144,26 @@ export default function Index() {
                 </Card>
               ) : (
                 <>
-                  <h1 className="text-5xl font-bold leading-tight gradient-text">
-                    Find Your Perfect Match with AI-Powered Recruitment
-                  </h1>
-                  <p className="text-xl text-gray-600">
-                    Connect talent with opportunity using advanced AI matching technology. 
-                    Whether you're hiring or seeking your next role, we make the process 
-                    seamless and intelligent.
-                  </p>
+                  <div className="space-y-6">
+                    <h1 className="text-5xl font-bold leading-tight">
+                      Transforming Talent Acquisition with AI
+                    </h1>
+                    <p className="text-2xl font-semibold text-primary">
+                      The Secret Behind Every Successful Company? Exceptional Talent.
+                    </p>
+                    <div className="space-y-6 text-xl text-gray-600">
+                      <p className="leading-relaxed">
+                        For Companies: Discover and attract top talent with our AI-powered platform that understands your unique needs.
+                      </p>
+                      <p className="leading-relaxed">
+                        For Job Seekers: Take the next step in your career journey with personalized opportunities that match your potential.
+                      </p>
+                    </div>
+                  </div>
                   
                   {/* Login Form */}
                   <div className="max-w-md space-y-6 bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <h2 className="text-2xl font-semibold">Get Started</h2>
+                    <h2 className="text-2xl font-semibold">Begin Your Journey</h2>
                     <div className="space-y-4">
                       <div className="space-y-3">
                         <Label className="text-base">I am a...</Label>
@@ -191,15 +199,15 @@ export default function Index() {
               <div className="grid gap-6">
                 <FeatureCard 
                   title="AI-Powered Matching"
-                  description="Our advanced AI algorithms ensure the perfect match between candidates and opportunities."
+                  description="Our sophisticated AI algorithms ensure perfect alignment between talent and opportunities, revolutionizing how connections are made."
                 />
                 <FeatureCard 
-                  title="Video Interviews"
-                  description="Streamline your hiring process with automated video interviews and AI analysis."
+                  title="Smart Video Interviews"
+                  description="Transform your hiring process with AI-analyzed video interviews that reveal true potential beyond the resume."
                 />
                 <FeatureCard 
-                  title="Smart Assessment"
-                  description="Evaluate candidates comprehensively with our intelligent assessment tools."
+                  title="Intelligent Assessment"
+                  description="Make data-driven decisions with our comprehensive AI evaluation system that identifies the best matches for your organization."
                 />
               </div>
             </div>

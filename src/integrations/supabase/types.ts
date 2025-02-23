@@ -25,6 +25,7 @@ export type Database = {
           resume_path: string | null
           status: string
           updated_at: string
+          video_analysis: Json | null
           video_path: string | null
         }
         Insert: {
@@ -42,6 +43,7 @@ export type Database = {
           resume_path?: string | null
           status?: string
           updated_at?: string
+          video_analysis?: Json | null
           video_path?: string | null
         }
         Update: {
@@ -59,6 +61,7 @@ export type Database = {
           resume_path?: string | null
           status?: string
           updated_at?: string
+          video_analysis?: Json | null
           video_path?: string | null
         }
         Relationships: [

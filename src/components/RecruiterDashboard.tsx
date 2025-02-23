@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +10,7 @@ import type { ApplicationData } from "@/types/application";
 import DashboardLayout from './DashboardLayout';
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Application = Database['public']['Tables']['applications']['Row'];
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -121,6 +121,10 @@ export default function RecruiterDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar>
+                          <AvatarImage 
+                            src={application.profiles?.avatar_url || ''} 
+                            alt={application.profiles?.full_name || 'Avatar'} 
+                          />
                           <AvatarFallback>
                             {application.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
                           </AvatarFallback>

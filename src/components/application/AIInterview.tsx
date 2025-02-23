@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
@@ -6,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
 import { ApplicationData, JobData, CandidateInfo } from '@/types/application';
+import { Card } from "@/components/ui/card";
 
 interface AIInterviewProps {
   applicationId: string;
@@ -16,6 +16,7 @@ interface AIInterviewProps {
 export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterviewProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
+  const [lastThreeLines, setLastThreeLines] = useState<string[]>([]);
   const { toast } = useToast();
   const audioStreamRef = useRef<MediaStream | null>(null);
   const transcriptRef = useRef<string[]>([]);
@@ -134,7 +135,8 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onConnect: () => {
       console.log('Connected to ElevenLabs websocket');
       setIsInterviewActive(true);
-      transcriptRef.current = []; // Reset transcript at start
+      transcriptRef.current = [];
+      setLastThreeLines([]);
       toast({
         title: "Connected to AI Interviewer",
         description: "The interview will begin shortly",
@@ -158,14 +160,18 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       if (message.type === 'transcript') {
         const text = message.data?.text || '';
         console.log('Adding human transcript:', text);
-        if (text.trim()) { // Only add non-empty transcripts
+        if (text.trim()) {
+          const line = `You: ${text}`;
           transcriptRef.current.push(`Human: ${text}`);
+          updateLastThreeLines(line);
         }
       } else if (message.type === 'response') {
         const text = message.data?.text || '';
         console.log('Adding AI response:', text);
-        if (text.trim()) { // Only add non-empty responses
-          transcriptRef.current.push(`AI: ${text}`);
+        if (text.trim()) {
+          const line = `AI: ${text}`;
+          transcriptRef.current.push(line);
+          updateLastThreeLines(line);
         }
       } else if (message.type === 'error') {
         console.error('Message error:', message.data);
@@ -399,7 +405,7 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
           )}
         </Button>
       ) : (
-        <div className="space-y-4 w-full">
+        <div className="space-y-4 w-full max-w-2xl">
           <div className="flex items-center justify-center gap-4">
             <div className={`p-4 rounded-full transition-all duration-200 ${conversation.isSpeaking ? 'bg-green-100 animate-pulse' : 'bg-gray-100'}`}>
               {conversation.isSpeaking ? (
@@ -412,6 +418,26 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
               {conversation.isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
             </div>
           </div>
+
+          <Card className="p-4 bg-gray-50 min-h-[120px]">
+            <div className="space-y-2">
+              {lastThreeLines.map((line, index) => (
+                <p 
+                  key={index} 
+                  className={`text-sm ${
+                    line.startsWith('AI:') ? 'text-primary font-medium' : 'text-gray-700'
+                  }`}
+                >
+                  {line}
+                </p>
+              ))}
+              {lastThreeLines.length === 0 && (
+                <p className="text-sm text-gray-500 text-center italic">
+                  Interview transcript will appear here...
+                </p>
+              )}
+            </div>
+          </Card>
           
           <div className="text-center">
             <Button

@@ -492,25 +492,6 @@ export default function ApplicationFlow() {
             debug: true,
             firstMessage: "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?"
           },
-          tts: {
-            voiceId: "pNInz6obpgDQGcFmaJgB",
-            model_id: "eleven_multilingual_v2",
-            voice_settings: {
-              similarity_boost: 0.75,
-              stability: 0.5,
-              style: 0.0,
-              use_speaker_boost: true
-            }
-          },
-          stt: {
-            sensitivity: 0.5,
-            noiseCancellation: true,
-            vadConfig: {
-              minSpeechActivity: 0.3,
-              minSilence: 0.5,
-              maxSpeechDuration: 30
-            }
-          }
         }
       });
 

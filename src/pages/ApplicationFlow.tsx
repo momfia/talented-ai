@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User } from "lucide-react";
+import { Loader2, User, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ResumeUpload } from "@/components/application/ResumeUpload";
 import { VideoRecorder } from "@/components/application/VideoRecorder";
@@ -49,7 +48,6 @@ export default function ApplicationFlow() {
           return;
         }
 
-        // Check for existing application
         const { data: applications, error } = await supabase
           .from('applications')
           .select('*')
@@ -70,7 +68,6 @@ export default function ApplicationFlow() {
             description: "Continuing your previous application",
           });
           
-          // Set the appropriate step based on the application status
           if (application.status === 'video_processed' || 
               application.status === 'video_uploaded' || 
               application.status === 'interview_started' ||
@@ -95,6 +92,8 @@ export default function ApplicationFlow() {
 
     checkAuthAndLoadApplication();
   }, [jobId, navigate, toast]);
+
+  const isApplicationCompleted = existingApplication?.status === 'interview_completed';
 
   if (!isInitialized || isLoading) {
     return (
@@ -122,58 +121,72 @@ export default function ApplicationFlow() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {existingApplication ? 'Continue Your Application' : 'Start Your Application'}
+                {isApplicationCompleted ? 'Application Submitted' : (existingApplication ? 'Continue Your Application' : 'Start Your Application')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                  {existingApplication?.resume_path ? 'Update Your Resume' : 'Upload Your Resume'}
-                </h3>
-                {currentStep === 'resume' && jobId && userId && (
-                  <ResumeUpload
-                    jobId={jobId}
-                    userId={userId}
-                    onUploadComplete={(id) => {
-                      setApplicationId(id);
-                      setCurrentStep('video');
-                    }}
-                  />
-                )}
-              </div>
+              {isApplicationCompleted ? (
+                <div className="text-center space-y-4 py-8">
+                  <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold text-gray-900">Thank you for completing your interview!</h3>
+                    <p className="text-gray-600">
+                      Your answers have been submitted. We will review your application and let you know if you have been selected for this role.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50' : ''}`}>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                      {existingApplication?.resume_path ? 'Update Your Resume' : 'Upload Your Resume'}
+                    </h3>
+                    {currentStep === 'resume' && jobId && userId && (
+                      <ResumeUpload
+                        jobId={jobId}
+                        userId={userId}
+                        onUploadComplete={(id) => {
+                          setApplicationId(id);
+                          setCurrentStep('video');
+                        }}
+                      />
+                    )}
+                  </div>
 
-              <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                  {existingApplication?.video_path ? 'Update Video Introduction' : 'Record Video Introduction'}
-                </h3>
-                {currentStep === 'video' && applicationId && (
-                  <VideoRecorder
-                    applicationId={applicationId}
-                    onRecordingComplete={() => setCurrentStep('interview')}
-                  />
-                )}
-              </div>
+                  <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50' : ''}`}>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                      {existingApplication?.video_path ? 'Update Video Introduction' : 'Record Video Introduction'}
+                    </h3>
+                    {currentStep === 'video' && applicationId && (
+                      <VideoRecorder
+                        applicationId={applicationId}
+                        onRecordingComplete={() => setCurrentStep('interview')}
+                      />
+                    )}
+                  </div>
 
-              <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
-                  {existingApplication?.interview_transcript ? 'Continue AI Interview' : 'Start AI Interview'}
-                </h3>
-                {currentStep === 'interview' && applicationId && jobId && (
-                  <AIInterview
-                    applicationId={applicationId}
-                    jobId={jobId}
-                    onInterviewStart={() => {
-                      toast({
-                        title: "Interview started",
-                        description: "The AI interviewer will now assess your application",
-                      });
-                    }}
-                  />
-                )}
-              </div>
+                  <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50' : ''}`}>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
+                      {existingApplication?.interview_transcript ? 'Continue AI Interview' : 'Start AI Interview'}
+                    </h3>
+                    {currentStep === 'interview' && applicationId && jobId && (
+                      <AIInterview
+                        applicationId={applicationId}
+                        jobId={jobId}
+                        onInterviewStart={() => {
+                          toast({
+                            title: "Interview started",
+                            description: "The AI interviewer will now assess your application",
+                          });
+                        }}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

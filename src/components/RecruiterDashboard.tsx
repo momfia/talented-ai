@@ -11,13 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileText,
   Users,
-  Star,
+  CirclePercent,
   Video,
-  FileCheck,
   MessageSquare,
-  Brain,
   Target,
-  Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -101,6 +98,14 @@ export default function RecruiterDashboard() {
   function getInterviewScore(assessment_score: number | null) {
     if (assessment_score === null) return "N/A";
     return `${Math.round(assessment_score)}%`;
+  }
+
+  function getScoreColor(scoreStr: string) {
+    if (scoreStr === "N/A") return "text-gray-400";
+    const score = parseInt(scoreStr);
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    return "text-red-500";
   }
 
   async function getFileUrl(filePath: string): Promise<string | null> {
@@ -378,7 +383,7 @@ export default function RecruiterDashboard() {
                         className="flex items-center gap-2"
                         title="Resume Analysis Score"
                       >
-                        <FileText className="h-5 w-5 text-blue-500" />
+                        <CirclePercent className={`h-5 w-5 ${getScoreColor(getAIScore(application.ai_analysis))}`} />
                         <span className="font-medium">
                           {getAIScore(application.ai_analysis)}
                         </span>
@@ -388,7 +393,7 @@ export default function RecruiterDashboard() {
                           className="flex items-center gap-2"
                           title="Interview Score"
                         >
-                          <Target className="h-5 w-5 text-green-500" />
+                          <Target className={`h-5 w-5 ${getScoreColor(getInterviewScore(application.assessment_score))}`} />
                           <span className="font-medium">
                             {getInterviewScore(application.assessment_score)}
                           </span>

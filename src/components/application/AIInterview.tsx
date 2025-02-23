@@ -54,7 +54,6 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         pronunciationNote: candidateInfo?.pronunciation_note,
         analysis: applicationData.ai_analysis,
         videoAnalysis: applicationData.video_analysis,
-        videoTranscript: applicationData.video_transcript,
         previousInteractions: {
           videoIntroduction: applicationData.video_transcript 
             ? "The candidate has provided a video introduction. Here's what they said: " + applicationData.video_transcript
@@ -315,6 +314,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         overrides: {
           agent: {
             language: "en",
+            prompt: {
             prompt: `You are Erin, a warm, engaging, and empathetic recruiting agent conducting this job interview. Your role is to connect with candidates on a personal level, treating each conversation like a genuine dialogue rather than an automated script.
 
 Interview Context:

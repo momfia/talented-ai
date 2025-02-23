@@ -3,97 +3,91 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Edit } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { ResumeUpload } from "@/components/application/ResumeUpload";
 import { VideoRecorder } from "@/components/application/VideoRecorder";
 import { AIInterview } from "@/components/application/AIInterview";
 import { ApplicationStep } from "@/types/application";
 
 export default function ApplicationFlow() {
-  const { jobId } = useParams<{ jobId: string }>();
+  const { id: jobId } = useParams<{ id: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<ApplicationStep>('resume');
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to apply for this position",
-          variant: "destructive",
-        });
-        navigate('/auth');
-        return;
-      }
-      setUserId(session.user.id);
-      return session.user.id;
-    };
-
-    const loadExistingApplication = async (candidateId: string) => {
-      if (!jobId) return;
-
+    const checkAuthAndLoadApplication = async () => {
       try {
-        console.log('Loading application for job:', jobId, 'candidate:', candidateId);
+        const { data: { session } } = await supabase.auth.getSession();
         
+        if (!session) {
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to apply for this position",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+
+        const userId = session.user.id;
+        setUserId(userId);
+
+        if (!jobId) {
+          toast({
+            title: "Error",
+            description: "Invalid job ID",
+            variant: "destructive",
+          });
+          navigate('/');
+          return;
+        }
+
         const { data: applications, error } = await supabase
           .from('applications')
           .select('*')
           .eq('job_id', jobId)
-          .eq('candidate_id', candidateId)
+          .eq('candidate_id', userId)
           .order('created_at', { ascending: false })
           .limit(1);
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         const application = applications?.[0];
         if (application) {
-          console.log('Found application:', application);
+          console.log('Found existing application:', application);
           setApplicationId(application.id);
           
-          if (application.status === 'video_processed' || application.status === 'video_uploaded' || application.status === 'interview_started') {
-            console.log('Setting step to interview');
+          if (application.status === 'video_processed' || 
+              application.status === 'video_uploaded' || 
+              application.status === 'interview_started') {
             setCurrentStep('interview');
           } else if (application.status === 'resume_uploaded') {
-            console.log('Setting step to video');
             setCurrentStep('video');
           }
         }
-      } catch (error) {
-        console.error('Error loading application:', error);
+      } catch (error: any) {
+        console.error('Error in initialization:', error);
         toast({
           title: "Error",
-          description: "Failed to load application data",
+          description: error.message || "Failed to initialize application",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
-    const init = async () => {
-      const userId = await checkAuth();
-      if (userId) {
-        await loadExistingApplication(userId);
-      }
-    };
-
-    init();
+    checkAuthAndLoadApplication();
   }, [jobId, navigate, toast]);
 
-  const handleStepChange = (step: ApplicationStep) => {
-    setCurrentStep(step);
-  };
-
-  if (!userId || isLoading) {
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -122,21 +116,9 @@ export default function ApplicationFlow() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2 justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                    Upload Your Resume
-                  </div>
-                  {currentStep !== 'resume' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleStepChange('resume')}
-                      className="hover:bg-gray-100"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                  Upload Your Resume
                 </h3>
                 {currentStep === 'resume' && jobId && userId && (
                   <ResumeUpload
@@ -151,21 +133,9 @@ export default function ApplicationFlow() {
               </div>
 
               <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50' : ''}`}>
-                <h3 className="font-semibold flex items-center gap-2 justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                    Record Video Introduction
-                  </div>
-                  {currentStep === 'interview' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleStepChange('video')}
-                      className="hover:bg-gray-100"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                  Record Video Introduction
                 </h3>
                 {currentStep === 'video' && applicationId && (
                   <VideoRecorder

@@ -82,8 +82,8 @@ export default function RecruiterDashboard() {
     return `${Math.round(assessment_score)}%`;
   }
 
-  function formatAnalysisContent(content: any, type: 'resume' | 'interview') {
-    if (!content) return 'No analysis available';
+  function formatAnalysisContent(content: any, type: 'resume' | 'interview'): JSX.Element {
+    if (!content) return <p>No analysis available</p>;
 
     if (type === 'resume') {
       const formattedContent = Object.entries(content).map(([key, value]) => {

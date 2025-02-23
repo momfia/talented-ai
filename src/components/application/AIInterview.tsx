@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const { toast } = useToast();
+  const audioStreamRef = useRef<MediaStream | null>(null);
 
   const getFirstName = (fullName?: string) => {
     if (!fullName) return '';
@@ -36,6 +37,13 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs websocket');
       setIsInterviewActive(false);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log('Audio track stopped:', track.label);
+        });
+        audioStreamRef.current = null;
+      }
       toast({
         title: "Interview Disconnected",
         description: "The connection was lost. Please try again.",
@@ -68,35 +76,63 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         });
       }
       setIsInterviewActive(false);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
     },
   });
 
   const { isSpeaking } = conversation;
 
+  useEffect(() => {
+    return () => {
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
+    };
+  }, []);
+
+  const initializeAudio = async () => {
+    try {
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000,
+          channelCount: 1
+        }
+      });
+      
+      audioStreamRef.current = stream;
+      
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        console.log('Audio track initialized:', track.label, track.readyState);
+      });
+
+      return stream;
+    } catch (error) {
+      console.error('Media initialization error:', error);
+      throw new Error('Microphone permission denied or audio system error');
+    }
+  };
+
   const startInterview = async () => {
     try {
       setIsProcessing(true);
 
-      let audioStream;
       try {
-        audioStream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 16000,
-            channelCount: 1
-          }
-        });
-        
-        audioStream.getAudioTracks().forEach(track => {
-          track.enabled = true;
-          console.log('Audio track enabled:', track.label, track.readyState);
-        });
-
+        await initializeAudio();
       } catch (error) {
-        console.error('Media initialization error:', error);
-        throw new Error('Microphone permission denied or audio system error');
+        console.error('Audio initialization error:', error);
+        throw new Error('Failed to initialize microphone. Please check your permissions and try again.');
       }
 
       const { data: jobData, error: jobError } = await supabase

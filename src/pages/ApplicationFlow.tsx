@@ -19,6 +19,7 @@ export default function ApplicationFlow() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [existingApplication, setExistingApplication] = useState<any>(null);
 
   useEffect(() => {
     const checkAuthAndLoadApplication = async () => {
@@ -48,6 +49,7 @@ export default function ApplicationFlow() {
           return;
         }
 
+        // Check for existing application
         const { data: applications, error } = await supabase
           .from('applications')
           .select('*')
@@ -61,11 +63,18 @@ export default function ApplicationFlow() {
         const application = applications?.[0];
         if (application) {
           console.log('Found existing application:', application);
+          setExistingApplication(application);
           setApplicationId(application.id);
+          toast({
+            title: "Existing Application Found",
+            description: "Continuing your previous application",
+          });
           
+          // Set the appropriate step based on the application status
           if (application.status === 'video_processed' || 
               application.status === 'video_uploaded' || 
-              application.status === 'interview_started') {
+              application.status === 'interview_started' ||
+              application.status === 'interview_completed') {
             setCurrentStep('interview');
           } else if (application.status === 'resume_uploaded') {
             setCurrentStep('video');
@@ -112,13 +121,15 @@ export default function ApplicationFlow() {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle>Job Application Process</CardTitle>
+              <CardTitle>
+                {existingApplication ? 'Continue Your Application' : 'Start Your Application'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className={`space-y-4 ${currentStep !== 'resume' ? 'opacity-50' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                  Upload Your Resume
+                  {existingApplication?.resume_path ? 'Update Your Resume' : 'Upload Your Resume'}
                 </h3>
                 {currentStep === 'resume' && jobId && userId && (
                   <ResumeUpload
@@ -135,7 +146,7 @@ export default function ApplicationFlow() {
               <div className={`space-y-4 ${currentStep !== 'video' ? 'opacity-50' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                  Record Video Introduction
+                  {existingApplication?.video_path ? 'Update Video Introduction' : 'Record Video Introduction'}
                 </h3>
                 {currentStep === 'video' && applicationId && (
                   <VideoRecorder
@@ -148,7 +159,7 @@ export default function ApplicationFlow() {
               <div className={`space-y-4 ${currentStep !== 'interview' ? 'opacity-50' : ''}`}>
                 <h3 className="font-semibold flex items-center gap-2">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
-                  AI Interview
+                  {existingApplication?.interview_transcript ? 'Continue AI Interview' : 'Start AI Interview'}
                 </h3>
                 {currentStep === 'interview' && applicationId && jobId && (
                   <AIInterview

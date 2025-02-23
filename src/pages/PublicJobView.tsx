@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
 type Job = {
   id: string;
@@ -82,7 +83,9 @@ export default function PublicJobView() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <h3 className="font-semibold">Description</h3>
-              <div className="text-sm whitespace-pre-wrap">{job.description}</div>
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown>{job.description}</ReactMarkdown>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -97,8 +100,8 @@ export default function PublicJobView() {
             {job.good_candidate_attributes && (
               <div className="space-y-2">
                 <h3 className="font-semibold">What Makes a Good Candidate</h3>
-                <div className="text-sm whitespace-pre-wrap">
-                  {job.good_candidate_attributes}
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>{job.good_candidate_attributes}</ReactMarkdown>
                 </div>
               </div>
             )}

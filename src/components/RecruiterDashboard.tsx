@@ -11,6 +11,7 @@ import DashboardLayout from './DashboardLayout';
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ReactMarkdown from 'react-markdown';
 
 type Application = Database['public']['Tables']['applications']['Row'];
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -23,7 +24,7 @@ interface ApplicationWithProfile extends Application {
 interface ModalContent {
   type: 'video' | 'transcript' | 'analysis';
   title: string;
-  content: any;
+  content: string;
 }
 
 export default function RecruiterDashboard() {
@@ -111,33 +112,22 @@ export default function RecruiterDashboard() {
         return (
           <div key={key} className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
-            <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">{value}</p>
+            <div className="mt-1 text-sm text-gray-600">
+              <ReactMarkdown className="prose prose-sm max-w-none">
+                {String(value)}
+              </ReactMarkdown>
+            </div>
           </div>
         );
       });
 
-      return (
-        <div className="space-y-4 bg-white rounded-lg p-6">
-          {formattedContent}
-        </div>
-      );
+      return <div className="space-y-4 bg-white rounded-lg p-6">{formattedContent}</div>;
     } else {
       return (
-        <div className="prose max-w-none">
-          <div className="space-y-6 bg-white rounded-lg p-6">
-            {content.split('\n').map((paragraph: string, index: number) => {
-              if (paragraph.startsWith('#')) {
-                return <h2 key={index} className="text-xl font-semibold mt-6 text-gray-900">{paragraph.replace('#', '').trim()}</h2>;
-              }
-              if (paragraph.startsWith('-')) {
-                return <li key={index} className="text-gray-700">{paragraph.replace('-', '').trim()}</li>;
-              }
-              if (paragraph.trim().length > 0) {
-                return <p key={index} className="text-gray-700">{paragraph}</p>;
-              }
-              return null;
-            })}
-          </div>
+        <div className="prose prose-sm max-w-none">
+          <ReactMarkdown className="space-y-4 bg-white rounded-lg p-6">
+            {String(content)}
+          </ReactMarkdown>
         </div>
       );
     }

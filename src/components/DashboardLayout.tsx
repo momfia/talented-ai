@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
@@ -83,8 +84,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         description: `You are now viewing as a ${newRole}`,
       });
 
-      // Redirect to appropriate dashboard
-      navigate(newRole === 'recruiter' ? '/recruiter-dashboard' : '/jobs');
+      // Redirect based on role
+      if (newRole === 'recruiter') {
+        navigate('/recruiter-dashboard');
+      } else {
+        navigate('/joblist'); // Navigate to JobList for candidates
+      }
     } catch (error: any) {
       toast({
         title: "Error updating role",
@@ -97,6 +102,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handleJobsClick = () => {
+    if (role === 'recruiter') {
+      navigate('/jobs');
+    } else {
+      navigate('/joblist');
+    }
   };
 
   return (
@@ -159,9 +172,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild
-                  isActive={location.pathname === '/jobs'}
+                  isActive={location.pathname === '/jobs' || location.pathname === '/joblist'}
                 >
-                  <button onClick={() => navigate('/jobs')} className="w-full">
+                  <button onClick={handleJobsClick} className="w-full">
                     <Briefcase className="h-4 w-4" />
                     <span>Jobs</span>
                   </button>

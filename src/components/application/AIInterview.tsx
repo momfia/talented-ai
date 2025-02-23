@@ -165,36 +165,29 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onMessage: (message) => {
       console.log('Received message:', message);
       
-      if (!message || typeof message.type === 'undefined') {
+      if (!message || typeof message.source === 'undefined') {
         console.error('Invalid message received:', message);
         return;
       }
 
-      console.log('Received message type:', message.type);
+      console.log('Received message source:', message.source);
       
-      if (message.type === 'text' || message.type === 'transcript') {
-        const text = message.data?.text || '';
+      if (message.source === 'human') {
+        const text = message.text || '';
         console.log('Adding human transcript:', text);
         if (text.trim()) {
           const line = `You: ${text}`;
           transcriptRef.current.push(`Human: ${text}`);
           updateLastThreeLines(line);
         }
-      } else if (message.type === 'message' || message.type === 'response') {
-        const text = message.data?.text || '';
+      } else if (message.source === 'assistant') {
+        const text = message.text || '';
         console.log('Adding AI response:', text);
         if (text.trim()) {
           const line = `AI: ${text}`;
           transcriptRef.current.push(line);
           updateLastThreeLines(line);
         }
-      } else if (message.type === 'error') {
-        console.error('Message error:', message.data);
-        toast({
-          title: "Interview Error",
-          description: message.data?.message || "An error occurred",
-          variant: "destructive",
-        });
       }
     },
     onError: (error) => {

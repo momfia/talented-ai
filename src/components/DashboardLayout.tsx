@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
-import { Home, Briefcase, Users, Settings, User, LogOut } from "lucide-react";
+import { Home, Briefcase, Settings, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -21,6 +21,7 @@ interface UserProfile {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<'recruiter' | 'candidate'>('recruiter');
@@ -148,32 +149,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <Separator className="my-2" />
             <SidebarMenu>
+              {role === 'recruiter' && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === '/recruiter-dashboard'}
+                  >
+                    <button onClick={() => navigate('/recruiter-dashboard')} className="w-full">
+                      <Home className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <button onClick={() => navigate('/recruiter-dashboard')} className="w-full">
-                    <Home className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </button>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={location.pathname === '/jobs'}
+                >
                   <button onClick={() => navigate('/jobs')} className="w-full">
                     <Briefcase className="h-4 w-4" />
                     <span>Jobs</span>
                   </button>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <button onClick={() => navigate('/candidates')} className="w-full">
-                    <Users className="h-4 w-4" />
-                    <span>Candidates</span>
-                  </button>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={location.pathname === '/settings'}
+                >
                   <button onClick={() => navigate('/settings')} className="w-full">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>

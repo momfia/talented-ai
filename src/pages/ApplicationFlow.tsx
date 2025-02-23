@@ -116,7 +116,7 @@ export default function ApplicationFlow() {
           console.log('Found application:', application);
           setApplicationId(application.id);
           
-          if (application.status === 'video_processed' || application.status === 'video_uploaded') {
+          if (application.status === 'video_processed' || application.status === 'video_uploaded' || application.status === 'interview_started') {
             console.log('Setting step to interview');
             setCurrentStep('interview');
           } else if (application.status === 'resume_uploaded') {

@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const ELEVEN_LABS_API_KEY = '';
+export let ELEVEN_LABS_API_KEY = '';
 
 // Get the API key from Supabase secrets
 const loadApiKey = async () => {
@@ -16,11 +16,7 @@ const loadApiKey = async () => {
   }
   
   if (data?.secret) {
-    Object.defineProperty(exports, 'ELEVEN_LABS_API_KEY', {
-      value: data.secret,
-      writable: false,
-      configurable: false
-    });
+    ELEVEN_LABS_API_KEY = data.secret;
   } else {
     console.error('Missing ELEVEN_LABS_API_KEY secret');
   }

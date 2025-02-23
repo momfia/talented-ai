@@ -17,6 +17,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const { toast } = useToast();
   const audioStreamRef = useRef<MediaStream | null>(null);
+  const transcriptRef = useRef<string[]>([]);
 
   const getFirstName = (fullName?: string) => {
     if (!fullName) return '';
@@ -56,12 +57,13 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onConnect: () => {
       console.log('Connected to ElevenLabs websocket');
       setIsInterviewActive(true);
+      transcriptRef.current = [];
       toast({
         title: "Connected to AI Interviewer",
         description: "The interview will begin shortly",
       });
     },
-    onDisconnect: () => {
+    onDisconnect: async () => {
       console.log('Disconnected from ElevenLabs websocket');
       setIsInterviewActive(false);
       if (audioStreamRef.current) {
@@ -71,15 +73,58 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         });
         audioStreamRef.current = null;
       }
-      toast({
-        title: "Interview Disconnected",
-        description: "The connection was lost. Please try again.",
-        variant: "destructive",
-      });
+
+      if (transcriptRef.current.length > 0) {
+        const fullTranscript = transcriptRef.current.join('\n');
+        try {
+          const { error: transcriptError } = await supabase
+            .from('applications')
+            .update({
+              conversation_transcript: fullTranscript,
+              status: 'interview_completed'
+            })
+            .eq('id', applicationId);
+
+          if (transcriptError) throw transcriptError;
+
+          const { data: assessmentData, error: assessmentError } = await supabase
+            .functions.invoke('analyze-interview', {
+              body: { applicationId, jobId, transcript: fullTranscript }
+            });
+
+          if (assessmentError) throw assessmentError;
+
+          const { error: updateError } = await supabase
+            .from('applications')
+            .update({
+              assessment_score: assessmentData.score,
+              interview_feedback: assessmentData.feedback
+            })
+            .eq('id', applicationId);
+
+          if (updateError) throw updateError;
+
+          toast({
+            title: "Interview Completed",
+            description: "Interview assessment has been generated.",
+          });
+        } catch (error) {
+          console.error('Error processing interview:', error);
+          toast({
+            title: "Error Processing Interview",
+            description: "There was an issue saving the interview results.",
+            variant: "destructive",
+          });
+        }
+      }
     },
     onMessage: (message) => {
       console.log('Received message:', message);
-      if (message.type === 'error') {
+      if (message.type === 'transcript') {
+        transcriptRef.current.push(`Human: ${message.data?.text || ''}`);
+      } else if (message.type === 'response') {
+        transcriptRef.current.push(`AI: ${message.data?.text || ''}`);
+      } else if (message.type === 'error') {
         toast({
           title: "Interview Error",
           description: message.data?.message || "An error occurred",

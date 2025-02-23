@@ -261,7 +261,7 @@ export default function RecruiterDashboard() {
                               }
                             }}
                           >
-                            <Download className="h-4 w-4 mr-1" />
+                            <FileText className="h-4 w-4 mr-1" />
                             Resume
                           </Button>
                         )}
@@ -289,7 +289,7 @@ export default function RecruiterDashboard() {
                             }}
                           >
                             <Video className="h-4 w-4 mr-1" />
-                            View Video
+                            Video
                           </Button>
                         )}
                         {application.interview_transcript && (
@@ -299,12 +299,13 @@ export default function RecruiterDashboard() {
                             onClick={() => setModalContent({
                               type: 'interview',
                               applicationData: {
-                                interview_transcript: application.interview_transcript
+                                interview_transcript: application.interview_transcript,
+                                ai_analysis: application.ai_analysis
                               }
                             })}
                           >
-                            <Brain className="h-4 w-4 mr-1" />
-                            Interview Details
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Interview
                           </Button>
                         )}
                       </div>
@@ -336,7 +337,7 @@ export default function RecruiterDashboard() {
             <DialogTitle className="text-xl font-semibold">
               {modalContent?.type === 'resume' && "Resume Review"}
               {modalContent?.type === 'video' && "Video Review"}
-              {modalContent?.type === 'interview' && "Interview Review"}
+              {modalContent?.type === 'interview' && "Interview Details"}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
@@ -390,7 +391,7 @@ export default function RecruiterDashboard() {
             {modalContent?.type === 'interview' && (
               <Tabs defaultValue="analysis">
                 <TabsList>
-                  <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                  <TabsTrigger value="analysis">Interview Analysis</TabsTrigger>
                   <TabsTrigger value="transcript">Raw Transcript</TabsTrigger>
                 </TabsList>
                 <TabsContent value="analysis" className="mt-4">

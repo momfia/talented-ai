@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Users, Star, Video, FileCheck, MessageSquare, Brain, Target } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Users, Star, Video, FileCheck, MessageSquare, Brain, Target, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
@@ -83,6 +84,20 @@ export default function RecruiterDashboard() {
     return `${Math.round(assessment_score)}%`;
   }
 
+  async function getFileUrl(filePath: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase.storage
+        .from('applications')
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (error) throw error;
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error getting file URL:', error);
+      return null;
+    }
+  }
+
   function formatAnalysisContent(content: any, type: 'resume' | 'interview'): JSX.Element {
     if (!content) return <p>No analysis available</p>;
 
@@ -113,7 +128,11 @@ export default function RecruiterDashboard() {
           <div key={key} className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
             <div className="mt-1 text-sm text-gray-600">
-              <ReactMarkdown className="prose prose-sm max-w-none">
+              <ReactMarkdown components={{
+                p: ({children}) => <p className="mt-1">{children}</p>,
+                ul: ({children}) => <ul className="list-disc pl-4 mt-2">{children}</ul>,
+                li: ({children}) => <li className="mt-1">{children}</li>
+              }}>
                 {String(value)}
               </ReactMarkdown>
             </div>
@@ -125,7 +144,11 @@ export default function RecruiterDashboard() {
     } else {
       return (
         <div className="prose prose-sm max-w-none">
-          <ReactMarkdown className="space-y-4 bg-white rounded-lg p-6">
+          <ReactMarkdown components={{
+            p: ({children}) => <p className="mt-2">{children}</p>,
+            ul: ({children}) => <ul className="list-disc pl-4 mt-2">{children}</ul>,
+            li: ({children}) => <li className="mt-1">{children}</li>
+          }}>
             {String(content)}
           </ReactMarkdown>
         </div>
@@ -204,10 +227,31 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={async () => {
+                              const url = await getFileUrl(application.resume_path!);
+                              if (url) {
+                                window.open(url, '_blank');
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not access resume file",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Resume
+                          </Button>
+                        )}
+                        {application.resume_path && (
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setModalContent({
                               type: 'analysis',
                               title: 'Resume Analysis',
-                              content: application.ai_analysis
+                              content: JSON.stringify(application.ai_analysis)
                             })}
                           >
                             <FileCheck className="h-4 w-4 mr-1" />
@@ -218,11 +262,22 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setModalContent({
-                              type: 'video',
-                              title: 'Video Introduction',
-                              content: application.video_path
-                            })}
+                            onClick={async () => {
+                              const url = await getFileUrl(application.video_path!);
+                              if (url) {
+                                setModalContent({
+                                  type: 'video',
+                                  title: 'Video Introduction',
+                                  content: url
+                                });
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not access video file",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
                           >
                             <Video className="h-4 w-4 mr-1" />
                             View Video
@@ -233,27 +288,13 @@ export default function RecruiterDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={() => setModalContent({
-                              type: 'transcript',
-                              title: 'Interview Transcript',
-                              content: application.interview_transcript
-                            })}
-                          >
-                            <MessageSquare className="h-4 w-4 mr-1" />
-                            Interview Notes
-                          </Button>
-                        )}
-                        {application.interview_feedback && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setModalContent({
                               type: 'analysis',
                               title: 'Interview Analysis',
-                              content: application.interview_feedback
+                              content: application.interview_transcript || ''
                             })}
                           >
                             <Brain className="h-4 w-4 mr-1" />
-                            Interview Analysis
+                            Interview Details
                           </Button>
                         )}
                       </div>
@@ -291,15 +332,26 @@ export default function RecruiterDashboard() {
                 Your browser does not support the video tag.
               </video>
             )}
-            {modalContent?.type === 'transcript' && (
-              <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg">
-                {modalContent.content}
-              </div>
+            {modalContent?.type === 'analysis' && modalContent.title === 'Interview Analysis' && (
+              <Tabs defaultValue="analysis">
+                <TabsList>
+                  <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                  <TabsTrigger value="transcript">Raw Transcript</TabsTrigger>
+                </TabsList>
+                <TabsContent value="analysis" className="mt-4">
+                  {formatAnalysisContent(modalContent.content, 'interview')}
+                </TabsContent>
+                <TabsContent value="transcript" className="mt-4">
+                  <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg">
+                    {modalContent.content}
+                  </div>
+                </TabsContent>
+              </Tabs>
             )}
-            {modalContent?.type === 'analysis' && (
+            {modalContent?.type === 'analysis' && modalContent.title !== 'Interview Analysis' && (
               <div className="bg-gray-50 rounded-lg">
                 {formatAnalysisContent(
-                  modalContent.content,
+                  JSON.parse(modalContent.content),
                   modalContent.title.toLowerCase().includes('interview') ? 'interview' : 'resume'
                 )}
               </div>

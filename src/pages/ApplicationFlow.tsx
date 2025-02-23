@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -218,10 +217,24 @@ export default function ApplicationFlow() {
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "Resume uploaded successfully",
-        description: "Let's move on to the video introduction",
-      });
+      const { error: analysisError } = await supabase.functions
+        .invoke('analyze-resume', {
+          body: { resumePath: filePath, applicationId: currentApplicationId }
+        });
+
+      if (analysisError) {
+        console.error('Error analyzing resume:', analysisError);
+        toast({
+          title: "Resume uploaded",
+          description: "Resume was uploaded but analysis failed. You can still continue.",
+          variant: "warning",
+        });
+      } else {
+        toast({
+          title: "Resume processed successfully",
+          description: "Let's move on to the video introduction",
+        });
+      }
 
       setCurrentStep('video');
     } catch (error) {
@@ -475,7 +488,8 @@ export default function ApplicationFlow() {
         },
         candidate: {
           keyAttributes: applicationData.key_attributes,
-          aiAnalysis: applicationData.ai_analysis
+          aiAnalysis: applicationData.ai_analysis,
+          resumeAnalysis: applicationData.ai_analysis
         }
       };
 
@@ -732,4 +746,3 @@ export default function ApplicationFlow() {
     </div>
   );
 }
-

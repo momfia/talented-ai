@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -489,6 +490,15 @@ export default function ApplicationFlow() {
 
       if (applicationError) throw applicationError;
 
+      const candidateInfo = applicationData.key_attributes || {};
+      const greeting = candidateInfo.full_name ? 
+        `Hello ${candidateInfo.full_name}! I'm your AI interviewer today.${
+          candidateInfo.pronunciation_note ? 
+          ` Before we begin, I want to make sure I'm pronouncing your name correctly. ${candidateInfo.pronunciation_note} Please let me know if I should pronounce it differently.` : 
+          ''
+        } I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?` :
+        "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
+
       const interviewContext = {
         job: {
           title: jobData.title,
@@ -498,6 +508,7 @@ export default function ApplicationFlow() {
           badCandidateAttributes: jobData.bad_candidate_attributes
         },
         candidate: {
+          personalInfo: candidateInfo,
           keyAttributes: applicationData.key_attributes,
           aiAnalysis: applicationData.ai_analysis,
           resumeAnalysis: applicationData.ai_analysis
@@ -515,7 +526,7 @@ export default function ApplicationFlow() {
             language: "en",
             context: JSON.stringify(interviewContext),
             debug: true,
-            firstMessage: "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?"
+            firstMessage: greeting
           },
         }
       });

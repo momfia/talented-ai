@@ -30,7 +30,6 @@ serve(async (req) => {
       throw new Error('Missing required environment variables');
     }
 
-    console.log('Initializing OpenAI with key length:', openAIApiKey.length);
     const openai = new OpenAI({ apiKey: openAIApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -71,12 +70,18 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a professional resume analyzer. Extract key information and provide a structured analysis.'
+            content: 'You are a professional resume analyzer. Extract key information including personal details and provide a structured analysis.'
           },
           {
             role: 'user',
             content: `Analyze this resume and provide a JSON response with the following structure:
               {
+                "personal_info": {
+                  "full_name": string,
+                  "pronunciation_note": string | null,
+                  "email": string | null,
+                  "phone": string | null
+                },
                 "skills": string[],
                 "experience_summary": string,
                 "key_achievements": string[],
@@ -84,6 +89,8 @@ serve(async (req) => {
                 "strengths": string[],
                 "potential_areas_of_improvement": string[]
               }
+              
+              For the pronunciation_note, analyze the name and if it might be challenging to pronounce or have multiple possible pronunciations, provide a note about it. Otherwise, set it to null.
               
               Resume text:
               ${text}`
@@ -103,24 +110,32 @@ serve(async (req) => {
       try {
         analysis = JSON.parse(chatCompletion.choices[0].message.content);
         console.log('Successfully parsed analysis:', analysis);
+
+        // Extract personal info for separate storage
+        const { personal_info, ...otherAnalysis } = analysis;
+
+        console.log('Updating application with analysis and personal info...');
+        const { error: updateError } = await supabase
+          .from('applications')
+          .update({
+            ai_analysis: otherAnalysis,
+            key_attributes: {
+              ...personal_info,
+              analyzed_at: new Date().toISOString()
+            },
+            status: 'resume_analyzed'
+          })
+          .eq('id', applicationId);
+
+        if (updateError) {
+          console.error('Error updating application:', updateError);
+          throw new Error('Failed to save analysis results');
+        }
+
       } catch (parseError) {
         console.error('Error parsing OpenAI response:', parseError);
         console.error('Raw content:', chatCompletion.choices[0].message.content);
         throw new Error('Failed to parse OpenAI response as JSON');
-      }
-
-      console.log('Updating application with analysis...');
-      const { error: updateError } = await supabase
-        .from('applications')
-        .update({
-          ai_analysis: analysis,
-          status: 'resume_analyzed'
-        })
-        .eq('id', applicationId);
-
-      if (updateError) {
-        console.error('Error updating application:', updateError);
-        throw new Error('Failed to save analysis results');
       }
 
       console.log('Analysis completed successfully');
@@ -155,4 +170,3 @@ serve(async (req) => {
     );
   }
 });
-

@@ -214,6 +214,31 @@ export default function JobForm() {
           <CardTitle>{id ? 'Edit Job' : 'Create New Job'}</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-6">
+            <Label>Upload Job Description Document</Label>
+            <div className="mt-2">
+              <FileUpload 
+                onProcessed={(data) => {
+                  form.setValue('title', data.title);
+                  form.setValue('description', data.description);
+                  if (data.good_candidate_attributes) {
+                    form.setValue('good_candidate_attributes', data.good_candidate_attributes);
+                  }
+                  if (data.bad_candidate_attributes) {
+                    form.setValue('bad_candidate_attributes', data.bad_candidate_attributes);
+                  }
+                  if (data.essential_attributes) {
+                    form.setValue('essential_attributes', data.essential_attributes);
+                    form.setValue('llm_suggested_attributes', data.essential_attributes);
+                  }
+                }}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Accepted formats: PDF, DOC, DOCX, HTML
+              </p>
+            </div>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -315,13 +340,6 @@ export default function JobForm() {
               />
 
               <div className="flex justify-between items-center mb-6">
-                <FileUpload 
-                  onProcessed={(data) => {
-                    form.setValue('title', data.title);
-                    form.setValue('description', data.description);
-                    form.setValue('essential_attributes', data.attributes);
-                  }}
-                />
                 <Button
                   type="button"
                   variant="outline"

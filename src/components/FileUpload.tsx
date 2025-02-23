@@ -9,7 +9,9 @@ interface FileUploadProps {
   onProcessed: (data: {
     title: string;
     description: string;
-    attributes: string[];
+    good_candidate_attributes?: string;
+    bad_candidate_attributes?: string;
+    essential_attributes?: string[];
   }) => void;
 }
 
@@ -24,7 +26,7 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
     try {
       setUploading(true);
 
-      // First, upload the file to Supabase storage
+      // Upload the file to Supabase storage
       const timestamp = new Date().getTime();
       const sanitizedFileName = file.name.replace(/[^\x00-\x7F]/g, '');
       const filePath = `job-documents/${timestamp}_${sanitizedFileName}`;
@@ -35,41 +37,38 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
 
       if (uploadError) throw uploadError;
 
-      // Then process it using the edge function
+      // Process it using the edge function
       const { data, error } = await supabase.functions.invoke('process-job-document', {
         body: { filePath }
       });
 
       if (error) throw error;
 
-      if (!data?.extractedContent) {
+      if (!data?.description) {
         throw new Error('No content extracted from document');
       }
-
-      // Parse the AI response and update the form
-      const extractedContent = typeof data.extractedContent === 'string' 
-        ? JSON.parse(data.extractedContent) 
-        : data.extractedContent;
 
       // Process the document through AI analysis
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-job', {
         body: {
-          title: extractedContent.title,
-          description: extractedContent.description,
+          title: data.title,
+          description: data.description,
         }
       });
 
       if (analysisError) throw analysisError;
 
       onProcessed({
-        title: extractedContent.title,
-        description: extractedContent.description,
-        attributes: analysisData?.suggestedAttributes || [],
+        title: data.title,
+        description: data.description,
+        good_candidate_attributes: data.good_candidate_attributes,
+        bad_candidate_attributes: data.bad_candidate_attributes,
+        essential_attributes: analysisData?.suggestedAttributes || []
       });
 
       toast({
         title: "Success",
-        description: "Job description processed and analyzed successfully",
+        description: "Job description processed successfully",
       });
     } catch (error: any) {
       toast({

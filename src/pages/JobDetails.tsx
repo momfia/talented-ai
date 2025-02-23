@@ -189,7 +189,7 @@ export default function JobDetails() {
   };
 
   const copyPublicLink = () => {
-    const url = `${window.location.origin}/jobs/${id}/apply`;
+    const url = `${window.location.origin}/public/jobs/${id}`;
     navigator.clipboard.writeText(url);
     toast({
       title: "Link copied!",

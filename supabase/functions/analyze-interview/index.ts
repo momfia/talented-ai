@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert hiring manager tasked with evaluating interview transcripts. 
     Analyze the interview transcript and assess the candidate based on the job requirements.
-    Provide a score from 0-100 and detailed feedback.`;
+    Provide a score from 0-100 and detailed feedback. Give more weight for the AI interview, followed by by resume and experience and then by video introduction`;
 
     const userPrompt = `Job Details:
     Title: ${jobData.title}
@@ -68,7 +68,7 @@ serve(async (req) => {
     Analyze the candidate's responses and provide:
     1. A score from 0-100 based on their alignment with job requirements
     2. Detailed feedback highlighting strengths and areas of concern
-    3. Assessment of technical skills and cultural fit`;
+    3. Assessment of technical skills and cultural fit. Provide more weight for the AI interview, followed by the resume and experience, and then by video introduction.`;
 
     console.log('Calling OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
@@ -23,7 +22,35 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     if (!fullName) return '';
     return fullName.split(' ')[0];
   };
-  
+
+  const formatInterviewContext = (jobData: JobData, applicationData: ApplicationData) => {
+    const candidateInfo = applicationData.key_attributes as CandidateInfo;
+    const firstName = getFirstName(candidateInfo?.full_name);
+    
+    return {
+      job: {
+        title: jobData.title,
+        description: jobData.description,
+        requirements: {
+          essential: jobData.essential_attributes,
+          desirable: jobData.good_candidate_attributes,
+          avoid: jobData.bad_candidate_attributes
+        }
+      },
+      candidate: {
+        name: firstName,
+        fullName: candidateInfo?.full_name,
+        pronunciationNote: candidateInfo?.pronunciation_note,
+        analysis: applicationData.ai_analysis
+      },
+      interviewGoals: [
+        "Assess candidate's qualifications against job requirements",
+        "Evaluate communication skills and cultural fit",
+        "Allow candidate to demonstrate their experience"
+      ]
+    };
+  };
+
   const conversation = useConversation({
     apiKey: import.meta.env.VITE_ELEVEN_LABS_API_KEY,
     onConnect: () => {
@@ -173,16 +200,8 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         } I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?` :
         "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
 
-      const interviewContext = {
-        job: jobData as JobData,
-        candidate: {
-          personalInfo: candidateInfo,
-          keyAttributes: applicationData.key_attributes,
-          aiAnalysis: applicationData.ai_analysis,
-        }
-      };
-
-      console.log('Starting interview with context:', interviewContext);
+      const interviewContext = formatInterviewContext(jobData as JobData, applicationData as ApplicationData);
+      console.log('Formatted interview context:', JSON.stringify(interviewContext, null, 2));
       
       await new Promise(resolve => setTimeout(resolve, 1000));
 

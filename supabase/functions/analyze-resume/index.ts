@@ -30,6 +30,7 @@ serve(async (req) => {
       throw new Error('Missing required environment variables');
     }
 
+    console.log('Initializing OpenAI with key length:', openAIApiKey.length);
     const openai = new OpenAI({ apiKey: openAIApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -56,59 +57,89 @@ serve(async (req) => {
       } else {
         text = await fileData.text();
       }
+      console.log('Extracted text length:', text.length);
     } catch (error) {
       console.error('Error converting file to text:', error);
       throw new Error('Failed to read resume content');
     }
 
-    console.log('Sending request to OpenAI...');
-    const chatCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional resume analyzer. Extract key information and provide a structured analysis.'
-        },
-        {
-          role: 'user',
-          content: `Analyze this resume and provide a JSON response with the following structure:
-            {
-              "skills": string[],
-              "experience_summary": string,
-              "key_achievements": string[],
-              "education": string[],
-              "strengths": string[],
-              "potential_areas_of_improvement": string[]
-            }
-            
-            Resume text:
-            ${text}`
-        }
-      ]
-    });
+    console.log('Preparing OpenAI request...');
+    try {
+      console.log('Making OpenAI API call...');
+      const chatCompletion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional resume analyzer. Extract key information and provide a structured analysis.'
+          },
+          {
+            role: 'user',
+            content: `Analyze this resume and provide a JSON response with the following structure:
+              {
+                "skills": string[],
+                "experience_summary": string,
+                "key_achievements": string[],
+                "education": string[],
+                "strengths": string[],
+                "potential_areas_of_improvement": string[]
+              }
+              
+              Resume text:
+              ${text}`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
 
-    const analysis = JSON.parse(chatCompletion.choices[0].message.content);
-    console.log('Parsed analysis:', analysis);
+      console.log('Received OpenAI response:', JSON.stringify(chatCompletion, null, 2));
 
-    console.log('Updating application with analysis...');
-    const { error: updateError } = await supabase
-      .from('applications')
-      .update({
-        ai_analysis: analysis,
-        status: 'resume_analyzed'
-      })
-      .eq('id', applicationId);
+      if (!chatCompletion.choices?.[0]?.message?.content) {
+        console.error('Invalid OpenAI response structure:', chatCompletion);
+        throw new Error('Invalid response from OpenAI');
+      }
 
-    if (updateError) {
-      console.error('Error updating application:', updateError);
-      throw new Error('Failed to save analysis results');
+      let analysis;
+      try {
+        analysis = JSON.parse(chatCompletion.choices[0].message.content);
+        console.log('Successfully parsed analysis:', analysis);
+      } catch (parseError) {
+        console.error('Error parsing OpenAI response:', parseError);
+        console.error('Raw content:', chatCompletion.choices[0].message.content);
+        throw new Error('Failed to parse OpenAI response as JSON');
+      }
+
+      console.log('Updating application with analysis...');
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update({
+          ai_analysis: analysis,
+          status: 'resume_analyzed'
+        })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        console.error('Error updating application:', updateError);
+        throw new Error('Failed to save analysis results');
+      }
+
+      console.log('Analysis completed successfully');
+      return new Response(
+        JSON.stringify({ success: true, analysis }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (openAIError) {
+      console.error('OpenAI API error:', openAIError);
+      if (openAIError instanceof Error) {
+        console.error('Error details:', {
+          name: openAIError.name,
+          message: openAIError.message,
+          stack: openAIError.stack
+        });
+      }
+      throw new Error(`OpenAI API error: ${openAIError instanceof Error ? openAIError.message : 'Unknown error'}`);
     }
-
-    console.log('Analysis completed successfully');
-    return new Response(
-      JSON.stringify({ success: true, analysis }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error('Error in analyze-resume function:', error);

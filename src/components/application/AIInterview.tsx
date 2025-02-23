@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
@@ -54,13 +55,15 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
 
   const handleInterviewEnd = async () => {
     console.log('Ending interview session...');
+    console.log('Current transcript entries:', transcriptRef.current.length);
+    
     if (transcriptRef.current.length === 0) {
       console.log('No transcript available, skipping analysis');
       return;
     }
 
     const fullTranscript = transcriptRef.current.join('\n');
-    console.log('Full transcript length:', fullTranscript.length);
+    console.log('Full transcript:', fullTranscript); // Debug log
 
     try {
       console.log('Updating application with transcript...');
@@ -80,11 +83,11 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       console.log('Calling analyze-interview function...');
       const { data: assessmentData, error: assessmentError } = await supabase
         .functions.invoke('analyze-interview', {
-          body: JSON.stringify({
+          body: {
             applicationId,
             jobId,
             transcript: fullTranscript
-          })
+          }
         });
 
       if (assessmentError) {
@@ -131,7 +134,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onConnect: () => {
       console.log('Connected to ElevenLabs websocket');
       setIsInterviewActive(true);
-      transcriptRef.current = [];
+      transcriptRef.current = []; // Reset transcript at start
       toast({
         title: "Connected to AI Interviewer",
         description: "The interview will begin shortly",
@@ -155,11 +158,15 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       if (message.type === 'transcript') {
         const text = message.data?.text || '';
         console.log('Adding human transcript:', text);
-        transcriptRef.current.push(`Human: ${text}`);
+        if (text.trim()) { // Only add non-empty transcripts
+          transcriptRef.current.push(`Human: ${text}`);
+        }
       } else if (message.type === 'response') {
         const text = message.data?.text || '';
         console.log('Adding AI response:', text);
-        transcriptRef.current.push(`AI: ${text}`);
+        if (text.trim()) { // Only add non-empty responses
+          transcriptRef.current.push(`AI: ${text}`);
+        }
       } else if (message.type === 'error') {
         console.error('Message error:', message.data);
         toast({
@@ -272,7 +279,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
 
       const interviewContext = formatInterviewContext(jobData as JobData, applicationData as ApplicationData);
-      console.log('Formatted interview context:', JSON.stringify(interviewContext, null, 2));
+      console.log('Starting interview with context:', interviewContext);
       
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -362,6 +369,10 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
         });
       }
       setIsInterviewActive(false);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -407,6 +418,9 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
               variant="outline"
               onClick={() => {
                 console.log('Manually ending interview session...');
+                if (transcriptRef.current.length === 0) {
+                  console.log('Current transcript entries:', transcriptRef.current);
+                }
                 conversation.endSession();
               }}
               className="mt-4"

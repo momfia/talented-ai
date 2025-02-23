@@ -29,7 +29,6 @@ interface ModalContent {
     video_path?: string;
     ai_analysis?: any;
     interview_transcript?: string;
-    video_analysis?: string;
   };
 }
 
@@ -38,6 +37,7 @@ export default function RecruiterDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalContent, setModalContent] = useState<ModalContent | null>(null);
+  const [signedUrls, setSignedUrls] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -91,11 +91,21 @@ export default function RecruiterDashboard() {
 
   async function getFileUrl(filePath: string): Promise<string | null> {
     try {
+      if (signedUrls[filePath]) {
+        return signedUrls[filePath];
+      }
+
       const { data, error } = await supabase.storage
         .from('applications')
         .createSignedUrl(filePath, 3600); // 1 hour expiry
 
       if (error) throw error;
+      
+      setSignedUrls(prev => ({
+        ...prev,
+        [filePath]: data.signedUrl
+      }));
+      
       return data.signedUrl;
     } catch (error) {
       console.error('Error getting file URL:', error);
@@ -232,13 +242,24 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setModalContent({
-                              type: 'resume',
-                              applicationData: {
-                                resume_path: application.resume_path,
-                                ai_analysis: application.ai_analysis
+                            onClick={async () => {
+                              const signedUrl = await getFileUrl(application.resume_path!);
+                              if (signedUrl) {
+                                setModalContent({
+                                  type: 'resume',
+                                  applicationData: {
+                                    resume_path: signedUrl,
+                                    ai_analysis: application.ai_analysis
+                                  }
+                                });
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not access resume file",
+                                  variant: "destructive"
+                                });
                               }
-                            })}
+                            }}
                           >
                             <Download className="h-4 w-4 mr-1" />
                             Resume
@@ -248,13 +269,24 @@ export default function RecruiterDashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setModalContent({
-                              type: 'video',
-                              applicationData: {
-                                video_path: application.video_path,
-                                video_analysis: application.video_analysis
+                            onClick={async () => {
+                              const signedUrl = await getFileUrl(application.video_path!);
+                              if (signedUrl) {
+                                setModalContent({
+                                  type: 'video',
+                                  applicationData: {
+                                    video_path: signedUrl,
+                                    ai_analysis: application.ai_analysis
+                                  }
+                                });
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not access video file",
+                                  variant: "destructive"
+                                });
                               }
-                            })}
+                            }}
                           >
                             <Video className="h-4 w-4 mr-1" />
                             View Video
@@ -318,6 +350,7 @@ export default function RecruiterDashboard() {
                   <iframe
                     src={modalContent.applicationData.resume_path}
                     className="w-full h-[60vh] rounded-lg border"
+                    title="Resume Preview"
                   />
                 </TabsContent>
                 <TabsContent value="analysis" className="mt-4">
@@ -345,9 +378,10 @@ export default function RecruiterDashboard() {
                 </TabsContent>
                 <TabsContent value="analysis" className="mt-4">
                   <div className="prose prose-sm max-w-none p-6 bg-gray-50 rounded-lg">
-                    <ReactMarkdown>
-                      {modalContent.applicationData.video_analysis || 'No analysis available'}
-                    </ReactMarkdown>
+                    {formatAnalysisContent(
+                      modalContent.applicationData.ai_analysis,
+                      'interview'
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>

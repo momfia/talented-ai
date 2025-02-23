@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2, FileText } from "lucide-react";
+import { Upload, Loader2, FileText, PenSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ResumeBuilder } from "./ResumeBuilder";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface ResumeUploadProps {
   jobId: string;
@@ -121,14 +121,9 @@ export function ResumeUpload({ jobId, userId, onUploadComplete }: ResumeUploadPr
   };
 
   return (
-    <Tabs defaultValue="upload" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="upload">Upload Resume</TabsTrigger>
-        <TabsTrigger value="build">Build Resume</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="upload" className="space-y-4">
-        <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6">
+    <div className="space-y-6">
+      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8">
+        <div className="space-y-4 text-center">
           <input
             type="file"
             accept=".pdf,.doc,.docx,.html,.htm,.md"
@@ -137,53 +132,78 @@ export function ResumeUpload({ jobId, userId, onUploadComplete }: ResumeUploadPr
             id="resume-upload"
             disabled={isUploading}
           />
-          <Button
-            variant="outline"
-            onClick={() => document.getElementById('resume-upload')?.click()}
-            disabled={isUploading}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Resume
-              </>
-            )}
-          </Button>
-          <p className="text-sm text-muted-foreground mt-2">
-            Accepted formats: PDF, DOC, DOCX, MD
-          </p>
-        </div>
-      </TabsContent>
-      
-      <TabsContent value="build">
-        <div className="space-y-4">
-          <ResumeBuilder onResumeGenerated={setGeneratedResume} />
-          {generatedResume && (
+          <div className="flex flex-col gap-4 items-center">
             <Button
-              className="w-full"
-              onClick={handleGeneratedResume}
+              variant="outline"
+              size="lg"
+              onClick={() => document.getElementById('resume-upload')?.click()}
               disabled={isUploading}
+              className="w-64"
             >
               {isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
+                  Uploading...
                 </>
               ) : (
                 <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Submit Resume
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Resume
                 </>
               )}
             </Button>
-          )}
+            
+            <div className="flex items-center gap-2">
+              <div className="h-px w-24 bg-border" />
+              <span className="text-sm text-muted-foreground">or</span>
+              <div className="h-px w-24 bg-border" />
+            </div>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="secondary" size="lg" className="w-64">
+                  <PenSquare className="mr-2 h-4 w-4" />
+                  Build Resume
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[800px] sm:w-[800px]">
+                <SheetHeader>
+                  <SheetTitle>Build Your Resume</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6">
+                  <ResumeBuilder 
+                    onResumeGenerated={(markdown) => {
+                      setGeneratedResume(markdown);
+                    }} 
+                  />
+                  {generatedResume && (
+                    <Button
+                      className="w-full mt-4"
+                      onClick={handleGeneratedResume}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Submit Resume
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
-      </TabsContent>
-    </Tabs>
+        <p className="text-sm text-muted-foreground mt-4">
+          Accepted formats: PDF, DOC, DOCX, MD
+        </p>
+      </div>
+    </div>
   );
 }

@@ -30,3 +30,8 @@ export interface JobData {
   good_candidate_attributes: string;
   bad_candidate_attributes: string;
 }
+
+export interface CandidateInfo extends Record<string, Json> {
+  full_name?: string;
+  pronunciation_note?: string;
+}

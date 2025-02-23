@@ -5,7 +5,7 @@ import { PhoneCall, Loader2, Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from '@11labs/react';
-import { ApplicationData, JobData } from '@/types/application';
+import { ApplicationData, JobData, CandidateInfo } from '@/types/application';
 
 interface AIInterviewProps {
   applicationId: string;
@@ -17,6 +17,11 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const { toast } = useToast();
+
+  const getFirstName = (fullName?: string) => {
+    if (!fullName) return '';
+    return fullName.split(' ')[0];
+  };
   
   const conversation = useConversation({
     apiKey: import.meta.env.VITE_ELEVEN_LABS_API_KEY,
@@ -121,10 +126,12 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
 
       if (applicationError) throw applicationError;
 
-      const candidateInfo = applicationData.key_attributes || {};
-      const greeting = candidateInfo.full_name ? 
-        `Hello ${candidateInfo.full_name}! I'm your AI interviewer today.${
-          candidateInfo.pronunciation_note ? 
+      const candidateInfo = applicationData.key_attributes as CandidateInfo;
+      const firstName = getFirstName(candidateInfo?.full_name);
+      
+      const greeting = firstName ? 
+        `Hi ${firstName}! I'm your AI interviewer today.${
+          candidateInfo?.pronunciation_note ? 
           ` Before we begin, I want to make sure I'm pronouncing your name correctly. ${candidateInfo.pronunciation_note} Please let me know if I should pronounce it differently.` : 
           ''
         } I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?` :

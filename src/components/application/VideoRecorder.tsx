@@ -125,27 +125,28 @@ export function VideoRecorder({ applicationId, onRecordingComplete }: VideoRecor
 
     try {
       setIsProcessing(true);
+      console.log('Starting video upload process...');
 
-      const { data: applications, error: fetchError } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('id', applicationId)
-        .limit(1);
-
-      if (fetchError || !applications?.[0]) {
-        throw new Error('Application not found');
-      }
-
+      // First upload the video
       const timestamp = new Date().getTime();
       const filePath = `${applicationId}/video/introduction_${timestamp}.webm`;
+      
+      console.log('Uploading video to storage...');
       const { error: uploadError } = await supabase.storage
         .from('applications')
         .upload(filePath, recordedBlob, {
+          contentType: 'video/webm',
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('Video uploaded successfully, updating application status...');
+      
+      // Update application with video path
       const { error: updateError } = await supabase
         .from('applications')
         .update({
@@ -154,16 +155,39 @@ export function VideoRecorder({ applicationId, onRecordingComplete }: VideoRecor
         })
         .eq('id', applicationId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw updateError;
+      }
 
-      toast({
-        title: "Video processed successfully",
-        description: "Let's proceed to the interview",
-      });
+      // Call analyze-video function
+      console.log('Calling analyze-video function...');
+      const { data: analysisData, error: analysisError } = await supabase.functions
+        .invoke('analyze-video', {
+          body: {
+            applicationId,
+            videoPath: filePath
+          }
+        });
+
+      if (analysisError) {
+        console.error('Analysis error:', analysisError);
+        toast({
+          title: "Video uploaded",
+          description: "Video uploaded but analysis is pending. You can proceed with the application.",
+          variant: "default",
+        });
+      } else {
+        console.log('Analysis completed:', analysisData);
+        toast({
+          title: "Video processed successfully",
+          description: "Let's proceed to the interview",
+        });
+      }
 
       onRecordingComplete();
     } catch (error) {
-      console.error('Error processing video:', error);
+      console.error('Error in upload process:', error);
       toast({
         title: "Error processing video",
         description: "Please try again",

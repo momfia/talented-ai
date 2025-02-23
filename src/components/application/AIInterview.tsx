@@ -165,12 +165,12 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
     onMessage: (message) => {
       console.log('Received message:', message);
       
-      if (!message || !message.source || !message.text) {
+      if (!message || !message.source || !message.message) {
         console.error('Invalid message received:', message);
         return;
       }
 
-      const text = message.text.trim();
+      const text = message.message.trim();
       if (!text) return;
 
       let line = '';
@@ -178,7 +178,7 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
         line = `You: ${text}`;
         transcriptRef.current.push(`Human: ${text}`);
       } else if (message.source === 'ai') {
-        line = `AI: ${text}`;
+        line = `Erin: ${text}`;
         transcriptRef.current.push(line);
       }
 
@@ -285,12 +285,12 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
       const firstName = getFirstName(candidateInfo?.full_name);
       
       const greeting = firstName ? 
-        `Hi ${firstName}! I'm your AI interviewer today.${
+        `Hi ${firstName}! I'm Erin, your interviewer today.${
           candidateInfo?.pronunciation_note ? 
           ` Before we begin, I want to make sure I'm pronouncing your name correctly. ${candidateInfo.pronunciation_note} Please let me know if I should pronounce it differently.` : 
           ''
         } I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?` :
-        "Hello! I'm your AI interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
+        "Hello! I'm Erin, your interviewer today. I've reviewed your application and I'd like to ask you some questions about your experience. Are you ready to begin?";
 
       const interviewContext = formatInterviewContext(jobData as JobData, applicationData as ApplicationData);
       console.log('Starting interview with context:', interviewContext);
@@ -423,7 +423,7 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
               )}
             </div>
             <div className="text-sm text-muted-foreground font-medium">
-              {conversation.isSpeaking ? 'AI Interviewer is speaking...' : 'Listening to your response...'}
+              {conversation.isSpeaking ? 'Interviewer is speaking...' : 'Listening to your response...'}
             </div>
           </div>
 
@@ -433,7 +433,7 @@ Your goal is to conduct an intelligent, evolving conversation that feels human a
                 <p 
                   key={index} 
                   className={`text-sm ${
-                    line.startsWith('AI:') ? 'text-primary font-medium' : 'text-gray-700'
+                    line.startsWith('Erin:') ? 'text-primary font-medium' : 'text-gray-700'
                   }`}
                 >
                   {line}

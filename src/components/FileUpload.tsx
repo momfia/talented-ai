@@ -23,8 +23,6 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
 
     try {
       setUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
 
       // First, upload the file to Supabase storage
       const timestamp = new Date().getTime();
@@ -53,15 +51,25 @@ export function FileUpload({ onProcessed }: FileUploadProps) {
         ? JSON.parse(data.extractedContent) 
         : data.extractedContent;
 
+      // Process the document through AI analysis
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-job', {
+        body: {
+          title: extractedContent.title,
+          description: extractedContent.description,
+        }
+      });
+
+      if (analysisError) throw analysisError;
+
       onProcessed({
         title: extractedContent.title,
         description: extractedContent.description,
-        attributes: extractedContent.attributes || [],
+        attributes: analysisData?.suggestedAttributes || [],
       });
 
       toast({
         title: "Success",
-        description: "Job description processed successfully",
+        description: "Job description processed and analyzed successfully",
       });
     } catch (error: any) {
       toast({

@@ -86,7 +86,11 @@ export default function Jobs() {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
-            <Card key={job.id} className="flex flex-col">
+            <Card 
+              key={job.id} 
+              className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => navigate(`/jobs/${job.id}`)}
+            >
               <CardHeader>
                 <CardTitle className="line-clamp-2">{job.title}</CardTitle>
                 <CardDescription>
@@ -102,10 +106,7 @@ export default function Jobs() {
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                   {job.description}
                 </p>
-                <Button 
-                  className="w-full"
-                  onClick={() => navigate(`/public/jobs/${job.id}`)}
-                >
+                <Button className="w-full">
                   View Details
                 </Button>
               </CardContent>

@@ -1,18 +1,17 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Briefcase, Share2, PenSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from '@/components/DashboardLayout';
+import DashboardLayout from "@/components/DashboardLayout";
 
 type Job = {
   id: string;
   title: string;
   description: string;
-  status: 'draft' | 'published' | 'archived';
+  status: "draft" | "published" | "archived";
   created_at: string;
 };
 
@@ -28,17 +27,19 @@ export default function JobManagement() {
 
   async function fetchJobs() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/auth');
+        navigate("/auth");
         return;
       }
 
       const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('recruiter_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("jobs")
+        .select("*")
+        .eq("recruiter_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setJobs(data || []);
@@ -46,7 +47,7 @@ export default function JobManagement() {
       toast({
         title: "Error fetching jobs",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -65,15 +66,17 @@ export default function JobManagement() {
   const handleUnpublish = async (jobId: string) => {
     try {
       const { error } = await supabase
-        .from('jobs')
-        .update({ status: 'draft' })
-        .eq('id', jobId);
+        .from("jobs")
+        .update({ status: "draft" })
+        .eq("id", jobId);
 
       if (error) throw error;
 
-      setJobs(jobs.map(job => 
-        job.id === jobId ? { ...job, status: 'draft' } : job
-      ));
+      setJobs(
+        jobs.map((job) =>
+          job.id === jobId ? { ...job, status: "draft" } : job
+        )
+      );
 
       toast({
         title: "Job unpublished",
@@ -83,21 +86,18 @@ export default function JobManagement() {
       toast({
         title: "Error unpublishing job",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (jobId: string) => {
     try {
-      const { error } = await supabase
-        .from('jobs')
-        .delete()
-        .eq('id', jobId);
+      const { error } = await supabase.from("jobs").delete().eq("id", jobId);
 
       if (error) throw error;
 
-      setJobs(jobs.filter(job => job.id !== jobId));
+      setJobs(jobs.filter((job) => job.id !== jobId));
       toast({
         title: "Job deleted",
         description: "The job has been deleted successfully",
@@ -106,7 +106,7 @@ export default function JobManagement() {
       toast({
         title: "Error deleting job",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -122,20 +122,28 @@ export default function JobManagement() {
           <h1 className="text-2xl font-bold">Job Listings</h1>
           <p className="text-muted-foreground mt-1">Manage your job postings</p>
         </div>
-        <Button onClick={() => navigate('/jobs/new')}>Create New Job</Button>
+        <Button onClick={() => navigate("/jobs/new")}>Create New Job</Button>
       </div>
 
       {jobs.map((job) => (
-        <Card key={job.id} className="mb-4">
+        <Card
+          key={job.id}
+          className="mb-4"
+          onClick={() => navigate(`/jobs/${job.id}`)}
+        >
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="text-xl mb-2">{job.title}</CardTitle>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  job.status === 'published' ? 'bg-green-100 text-green-800' : 
-                  job.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
-                  'bg-gray-100 text-gray-800'
-                }`}>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    job.status === "published"
+                      ? "bg-green-100 text-green-800"
+                      : job.status === "draft"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
                   {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                 </span>
               </div>
@@ -148,7 +156,7 @@ export default function JobManagement() {
                   <Share2 className="h-4 w-4 mr-1" />
                   Share Link
                 </Button>
-                {job.status === 'published' && (
+                {job.status === "published" && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -191,10 +199,7 @@ export default function JobManagement() {
           <p className="mt-2 text-muted-foreground">
             Get started by creating your first job posting
           </p>
-          <Button
-            onClick={() => navigate('/jobs/new')}
-            className="mt-4"
-          >
+          <Button onClick={() => navigate("/jobs/new")} className="mt-4">
             Create Job
           </Button>
         </div>

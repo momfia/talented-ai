@@ -161,7 +161,7 @@ export function ResumeUpload({ jobId, userId, onUploadComplete }: ResumeUploadPr
 
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="secondary" size="lg" className="w-64">
+                <Button variant="default" size="lg" className="w-64">
                   <PenSquare className="mr-2 h-4 w-4" />
                   Build Resume
                 </Button>

@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Users, Star } from "lucide-react";
+import { FileText, Users, Star, Video, FileCheck, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import type { ApplicationData } from "@/types/application";
 import DashboardLayout from './DashboardLayout';
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 type Application = Database['public']['Tables']['applications']['Row'];
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -18,11 +20,17 @@ interface ApplicationWithProfile extends Application {
   profiles: Profile;
 }
 
+interface ModalContent {
+  type: 'video' | 'transcript' | 'analysis';
+  title: string;
+  content: any;
+}
+
 export default function RecruiterDashboard() {
   const [applications, setApplications] = useState<ApplicationWithProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTranscript, setSelectedTranscript] = useState<string | null>(null);
+  const [modalContent, setModalContent] = useState<ModalContent | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,6 +77,21 @@ export default function RecruiterDashboard() {
     return score ? `${Math.round(score * 100)}%` : 'N/A';
   }
 
+  function getStatusBadgeColor(status: string) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'interviewed':
+        return 'bg-blue-100 text-blue-800';
+      case 'accepted':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
   const content = loading ? (
     <div className="flex justify-center items-center min-h-screen">
       <p className="text-lg">Loading dashboard...</p>
@@ -85,54 +108,123 @@ export default function RecruiterDashboard() {
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-6 w-6" />
               <h2 className="text-2xl font-semibold">{job.title}</h2>
+              <Badge variant="secondary">
+                {jobApplications.length} candidate{jobApplications.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {jobApplications.map(application => (
-                <Card key={application.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {application.profiles?.full_name || 'Anonymous Candidate'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+            <div className="bg-white rounded-lg shadow">
+              {jobApplications.map((application, index) => (
+                <div key={application.id}>
+                  {index > 0 && <Separator />}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Avatar>
+                          <AvatarFallback>
+                            {application.profiles?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold">
+                            {application.profiles?.full_name || 'Anonymous Candidate'}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={getStatusBadgeColor(application.status)}>
+                              {application.status}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              Applied {new Date(application.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {application.resume_path && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setModalContent({
+                              type: 'analysis',
+                              title: 'Resume Analysis',
+                              content: application.ai_analysis
+                            })}
+                          >
+                            <FileCheck className="h-4 w-4 mr-1" />
+                            Resume Analysis
+                          </Button>
+                        )}
+                        {application.video_path && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setModalContent({
+                              type: 'video',
+                              title: 'Video Introduction',
+                              content: application.video_path
+                            })}
+                          >
+                            <Video className="h-4 w-4 mr-1" />
+                            View Video
+                          </Button>
+                        )}
+                        {application.interview_transcript && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setModalContent({
+                              type: 'transcript',
+                              title: 'Interview Transcript',
+                              content: application.interview_transcript
+                            })}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Interview Notes
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                           <Star className="h-5 w-5 text-yellow-500" />
-                          <span className="text-sm font-medium">AI Score</span>
+                          <span className="font-medium">{getAIScore(application.ai_analysis)}</span>
                         </div>
-                        <span className="font-bold">
-                          {getAIScore(application.ai_analysis)}
-                        </span>
                       </div>
-                      
-                      {application.interview_transcript && (
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => setSelectedTranscript(application.interview_transcript)}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          View Interview Transcript
-                        </Button>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         );
       })}
 
-      <Dialog open={!!selectedTranscript} onOpenChange={() => setSelectedTranscript(null)}>
+      <Dialog open={!!modalContent} onOpenChange={() => setModalContent(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Interview Transcript</DialogTitle>
+            <DialogTitle>{modalContent?.title}</DialogTitle>
           </DialogHeader>
-          <div className="whitespace-pre-wrap font-mono text-sm">
-            {selectedTranscript}
+          <div className="mt-4">
+            {modalContent?.type === 'video' && (
+              <video controls className="w-full rounded-lg">
+                <source src={modalContent.content} type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
+            )}
+            {modalContent?.type === 'transcript' && (
+              <div className="whitespace-pre-wrap font-mono text-sm">
+                {modalContent.content}
+              </div>
+            )}
+            {modalContent?.type === 'analysis' && (
+              <div className="prose max-w-none">
+                <pre className="bg-gray-50 p-4 rounded-lg overflow-auto">
+                  {JSON.stringify(modalContent.content, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

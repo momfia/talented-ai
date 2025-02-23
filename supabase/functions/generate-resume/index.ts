@@ -13,13 +13,19 @@ serve(async (req) => {
   }
 
   try {
-    const { experience, education, skills, currentResume } = await req.json();
+    const { personalInfo, experience, education, skills, currentResume } = await req.json();
 
     const systemPrompt = `You are an expert resume writer. Create a professional resume in markdown format based on the information provided. 
     Focus on highlighting achievements and using action verbs. Keep the format clean and professional.
     If a current resume is provided, improve upon it while maintaining the core information.`;
 
     const userPrompt = `Create a professional resume with the following information:
+    
+    Personal Information:
+    - Name: ${personalInfo.fullName}
+    - Email: ${personalInfo.email}
+    - Phone: ${personalInfo.phone}
+    - LinkedIn: ${personalInfo.linkedIn}
     
     Experience:
     ${experience}
@@ -32,7 +38,7 @@ serve(async (req) => {
     
     ${currentResume ? `Current Resume (improve this):\n${currentResume}` : ''}
     
-    Format the resume in clean, professional markdown with clear sections for Experience, Education, and Skills.
+    Format the resume in clean, professional markdown with clear sections for contact information, experience, education, and skills.
     Use bullet points for achievements and responsibilities.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ResumeUpload } from "@/components/application/ResumeUpload";
 import { VideoRecorder } from "@/components/application/VideoRecorder";
 import { AIInterview } from "@/components/application/AIInterview";
 import { ApplicationStep } from "@/types/application";
 import { AppHeader } from "@/components/shared/AppHeader";
+import { Button } from "@/components/ui/button";
 
 export default function ApplicationFlow() {
   const { id: jobId } = useParams<{ id: string }>();
@@ -96,6 +97,40 @@ export default function ApplicationFlow() {
 
   const isApplicationCompleted = existingApplication?.status === 'interview_completed';
 
+  const handleRestart = async () => {
+    if (!jobId || !userId) return;
+    
+    try {
+      const { data: newApplication, error } = await supabase
+        .from('applications')
+        .insert({
+          job_id: jobId,
+          candidate_id: userId,
+          status: 'in_progress'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setApplicationId(newApplication.id);
+      setCurrentStep('resume');
+      setExistingApplication(null);
+      
+      toast({
+        title: "Application Restarted",
+        description: "You can now submit a new application",
+      });
+    } catch (error: any) {
+      console.error('Error restarting application:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restart application",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -180,6 +215,20 @@ export default function ApplicationFlow() {
               )}
             </CardContent>
           </Card>
+
+          {(existingApplication || isApplicationCompleted) && (
+            <div className="fixed bottom-6 right-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRestart}
+                className="shadow-lg hover:shadow-xl transition-shadow"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Start New Application
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

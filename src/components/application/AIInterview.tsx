@@ -319,9 +319,10 @@ Guidelines for the conversation:
 
 2. Natural, Evolving Dialogue:
 - Begin with open-ended questions about their career journey
-- Avoid echoing responses; instead, build on them with deeper questions
+- Avoid echoing responses; 
 - Focus on skills related to the job requirements
 - Avoid repeating responses and resynthesizing them, that wastes time, keep the candidate engaged
+- Don't give them affirmation about whether they are fit for the job or not, dont give expectations.
 - Transition smoothly from friendly questions to probing inquiries
 
 3. Active Listening & Intelligent Follow-Up:

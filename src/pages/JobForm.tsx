@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from "react-hook-form";
@@ -100,7 +101,14 @@ export default function JobForm() {
 
       if (error) throw error;
       if (data) {
-        Object.entries(data).forEach(([key, value]) => {
+        // Ensure essential_attributes and llm_suggested_attributes are arrays
+        const formattedData = {
+          ...data,
+          essential_attributes: Array.isArray(data.essential_attributes) ? data.essential_attributes : [],
+          llm_suggested_attributes: Array.isArray(data.llm_suggested_attributes) ? data.llm_suggested_attributes : []
+        };
+        
+        Object.entries(formattedData).forEach(([key, value]) => {
           form.setValue(key as keyof JobFormValues, value);
         });
       }
@@ -172,8 +180,8 @@ export default function JobForm() {
         good_candidate_attributes: data.good_candidate_attributes,
         bad_candidate_attributes: data.bad_candidate_attributes,
         status: data.status,
-        essential_attributes: data.essential_attributes,
-        llm_suggested_attributes: data.llm_suggested_attributes,
+        essential_attributes: data.essential_attributes || [],
+        llm_suggested_attributes: data.llm_suggested_attributes || [],
         recruiter_id: session.user.id
       };
 
@@ -203,7 +211,7 @@ export default function JobForm() {
   }
 
   const handleAttributesChange = (newAttributes: string[]) => {
-    form.setValue('essential_attributes', newAttributes, {
+    form.setValue('essential_attributes', newAttributes || [], {
       shouldValidate: true,
       shouldDirty: true,
     });
@@ -337,7 +345,7 @@ export default function JobForm() {
               <div className="space-y-4">
                 <Label>Essential Attributes</Label>
                 <DraggableAttributes
-                  attributes={form.watch('essential_attributes')}
+                  attributes={form.watch('essential_attributes') || []}
                   onChange={handleAttributesChange}
                 />
               </div>
@@ -351,7 +359,8 @@ export default function JobForm() {
                 </Button>
               </div>
 
-              {form.watch('llm_suggested_attributes').length > 0 && (
+              {Array.isArray(form.watch('llm_suggested_attributes')) && 
+               form.watch('llm_suggested_attributes').length > 0 && (
                 <div>
                   <Label>AI Suggested Attributes</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -360,8 +369,9 @@ export default function JobForm() {
                         key={index}
                         className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
                         onClick={() => {
-                          if (!form.getValues('essential_attributes').includes(attr)) {
-                            handleAttributesChange([...form.getValues('essential_attributes'), attr]);
+                          const currentAttributes = form.getValues('essential_attributes') || [];
+                          if (!currentAttributes.includes(attr)) {
+                            handleAttributesChange([...currentAttributes, attr]);
                           }
                         }}
                       >

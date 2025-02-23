@@ -89,7 +89,7 @@ serve(async (req) => {
     const analysis = analysisResponse.choices[0].message.content;
     console.log('Analysis completed:', analysis?.substring(0, 100) + '...');
 
-    // Update the application with the analysis results
+    // Update the application with both transcript and analysis results
     const { error: updateError } = await supabaseClient
       .from('applications')
       .update({
@@ -104,7 +104,7 @@ serve(async (req) => {
       throw new Error(`Failed to update application: ${updateError.message}`);
     }
 
-    console.log('Successfully updated application with analysis');
+    console.log('Successfully updated application with transcript and analysis');
 
     return new Response(
       JSON.stringify({

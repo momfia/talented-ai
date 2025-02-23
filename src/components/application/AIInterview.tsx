@@ -172,15 +172,15 @@ export function AIInterview({ applicationId, jobId, onInterviewStart }: AIInterv
 
       console.log('Received message source:', message.source);
       
-      if (message.source === 'human') {
+      if (message.source === 'user') {
         const text = message.text || '';
-        console.log('Adding human transcript:', text);
+        console.log('Adding user transcript:', text);
         if (text.trim()) {
           const line = `You: ${text}`;
           transcriptRef.current.push(`Human: ${text}`);
           updateLastThreeLines(line);
         }
-      } else if (message.source === 'assistant') {
+      } else if (message.source === 'ai') {
         const text = message.text || '';
         console.log('Adding AI response:', text);
         if (text.trim()) {

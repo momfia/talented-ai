@@ -79,7 +79,68 @@ export default function RecruiterDashboard() {
 
   function getInterviewScore(assessment_score: number | null) {
     if (assessment_score === null) return 'N/A';
-    return `${Math.round(assessment_score * 100)}%`;
+    return `${Math.round(assessment_score)}%`;
+  }
+
+  function formatAnalysisContent(content: any, type: 'resume' | 'interview') {
+    if (!content) return 'No analysis available';
+
+    if (type === 'resume') {
+      const formattedContent = Object.entries(content).map(([key, value]) => {
+        const formattedKey = key.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        
+        if (typeof value === 'number') {
+          return (
+            <div key={key} className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="h-2 w-full bg-gray-200 rounded-full">
+                  <div 
+                    className="h-2 bg-blue-500 rounded-full" 
+                    style={{ width: `${Math.round(value * 100)}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium">{Math.round(value * 100)}%</span>
+              </div>
+            </div>
+          );
+        }
+        
+        return (
+          <div key={key} className="mb-4">
+            <h3 className="text-sm font-semibold text-gray-700">{formattedKey}</h3>
+            <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">{value}</p>
+          </div>
+        );
+      });
+
+      return (
+        <div className="space-y-4 bg-white rounded-lg p-6">
+          {formattedContent}
+        </div>
+      );
+    } else {
+      return (
+        <div className="prose max-w-none">
+          <div className="space-y-6 bg-white rounded-lg p-6">
+            {content.split('\n').map((paragraph: string, index: number) => {
+              if (paragraph.startsWith('#')) {
+                return <h2 key={index} className="text-xl font-semibold mt-6 text-gray-900">{paragraph.replace('#', '').trim()}</h2>;
+              }
+              if (paragraph.startsWith('-')) {
+                return <li key={index} className="text-gray-700">{paragraph.replace('-', '').trim()}</li>;
+              }
+              if (paragraph.trim().length > 0) {
+                return <p key={index} className="text-gray-700">{paragraph}</p>;
+              }
+              return null;
+            })}
+          </div>
+        </div>
+      );
+    }
   }
 
   function getStatusBadgeColor(status: string) {
@@ -229,9 +290,9 @@ export default function RecruiterDashboard() {
       })}
 
       <Dialog open={!!modalContent} onOpenChange={() => setModalContent(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{modalContent?.title}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{modalContent?.title}</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
             {modalContent?.type === 'video' && (
@@ -241,15 +302,16 @@ export default function RecruiterDashboard() {
               </video>
             )}
             {modalContent?.type === 'transcript' && (
-              <div className="whitespace-pre-wrap font-mono text-sm">
+              <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg">
                 {modalContent.content}
               </div>
             )}
             {modalContent?.type === 'analysis' && (
-              <div className="prose max-w-none">
-                <pre className="bg-gray-50 p-4 rounded-lg overflow-auto">
-                  {JSON.stringify(modalContent.content, null, 2)}
-                </pre>
+              <div className="bg-gray-50 rounded-lg">
+                {formatAnalysisContent(
+                  modalContent.content,
+                  modalContent.title.toLowerCase().includes('interview') ? 'interview' : 'resume'
+                )}
               </div>
             )}
           </div>
